@@ -22,9 +22,6 @@ namespace Redis::Util {
     using StringSet = std::unordered_set<std::string>;
     using SecondsOpt = std::optional<std::chrono::seconds>;
 
-    template<typename T>
-    using Result = std::expected<T, Core::HttpError>;
-
     inline HashMap ParseHashMap(const Database::Redis::UniqueReply& reply) {
         HashMap hash_map;
         hash_map.reserve(reply->elements);

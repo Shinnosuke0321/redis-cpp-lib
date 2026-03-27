@@ -4,7 +4,7 @@
 
 #include "redis/redis_lib.h"
 
-namespace Database {
+namespace database {
     static void PreparePrams(const std::string& cmd, const std::deque<std::string>& params, std::vector<const char*>& argv, std::vector<size_t>& argvlen) {
         argv.clear();
         argvlen.clear();
@@ -71,12 +71,12 @@ namespace Database {
                     PreparePrams(redis_req.cmd, redis_req.params, argv, argvlen);
                     void* raw = redisCommandArgv(m_context.get(), static_cast<int>(argv.size()), argv.data(), argvlen.data());
                     if (!raw) {
-                        redis_req.on_error(RedisError::ReplyNull());
+                        redis_req.on_error(redis_error::ReplyNull());
                         return;
                     }
                     UniqueReply reply(static_cast<redisReply*>(raw));
                     if (reply->type == REDIS_REPLY_ERROR) {
-                        redis_req.on_error(RedisError::ReplyError(reply->str));
+                        redis_req.on_error(redis_error::ReplyError(reply->str));
                         return;
                     }
                     redis_req.on_success(std::move(reply));
@@ -84,12 +84,12 @@ namespace Database {
                 [&](PipelineRequest& pipeline_req) {
                     size_t appended = 0;
                     std::deque<UniqueReply> replies;
-                    std::optional<RedisError> err_opt;
+                    std::optional<redis_error> err_opt;
                     for (const auto& [cmd, params] : pipeline_req.commands) {
                         PreparePrams(cmd, params, argv, argvlen);
                         if (redisAppendCommandArgv(m_context.get(), static_cast<int>(argv.size()),argv.data(),argvlen.data()) != REDIS_OK)
                         {
-                            err_opt.emplace(RedisError::AppendFailed());
+                            err_opt.emplace(redis_error::AppendFailed());
                             pipeline_req.commands.clear();
                             break;
                         }
@@ -98,12 +98,12 @@ namespace Database {
                     for (size_t i = 0; i < appended; ++i) {
                         void* raw = nullptr;
                         if (redisGetReply(m_context.get(), &raw) != REDIS_OK || !raw) {
-                            err_opt.emplace(RedisError::ReplyNull());
+                            err_opt.emplace(redis_error::ReplyNull());
                             break;
                         }
                         UniqueReply reply(static_cast<redisReply*>(raw));
                         if (reply->type == REDIS_REPLY_ERROR) {
-                            err_opt.emplace(RedisError::ReplyError(reply->str));
+                            err_opt.emplace(redis_error::ReplyError(reply->str));
                             break;
                         }
                         replies.emplace_back(std::move(reply));

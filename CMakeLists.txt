@@ -6,18 +6,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(redis-cpp-lib STATIC
-        src/redis_priv.cpp
-        src/redis_pub.cpp
+        lib/src/redis_priv.cpp
+        lib/src/redis_pub.cpp
 )
 
 target_include_directories(redis-cpp-lib
         PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "lib/include"
 )
 
 add_library(RedisCppLib::RedisCppLib ALIAS redis-cpp-lib)
 
 target_compile_features(redis-cpp-lib PUBLIC cxx_std_23)
+
+include(CTest)
+if (PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif ()
 
 find_package(hiredis QUIET)
 if (NOT hiredis_FOUND)

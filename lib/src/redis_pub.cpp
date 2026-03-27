@@ -4,7 +4,7 @@
 
 #include "redis/redis_lib.h"
 
-namespace Database {
+namespace database {
     std::expected<std::unique_ptr<Redis>,Core::Database::ConnectionError> Redis::ConnectionFactory() noexcept {
         using Core::Database::ConnectionError;
         const char* host = std::getenv("REDIS_HOST");
@@ -89,8 +89,8 @@ namespace Database {
         m_cv.notify_one();
     }
 
-    std::future<std::expected<Redis::UniqueReply, RedisError> > Redis::execute_command(const std::string_view cmd, const std::string_view key) const noexcept {
-        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, RedisError>>>();
+    std::future<std::expected<Redis::UniqueReply, redis_error> > Redis::execute_command(const std::string_view cmd, const std::string_view key) const noexcept {
+        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, redis_error>>>();
         auto future = prom->get_future();
         RedisRequest request{};
         request.cmd = std::string(cmd);
@@ -100,7 +100,7 @@ namespace Database {
                 prom->set_value(std::move(reply));
             } catch (...) {}
         };
-        request.on_error = [prom](const RedisError& err) {
+        request.on_error = [prom](const redis_error& err) {
             try {
                 prom->set_value(std::unexpected(err));
             } catch (...) {}
@@ -113,8 +113,8 @@ namespace Database {
         return future;
     }
 
-    std::future<std::expected<Redis::UniqueReply, RedisError>> Redis::execute_command(const std::string_view cmd, const std::string_view key, const std::string_view str_val) const noexcept {
-        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, RedisError>>>();
+    std::future<std::expected<Redis::UniqueReply, redis_error>> Redis::execute_command(const std::string_view cmd, const std::string_view key, const std::string_view str_val) const noexcept {
+        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, redis_error>>>();
         auto future = prom->get_future();
         RedisRequest request{};
         request.cmd = std::string(cmd);
@@ -125,7 +125,7 @@ namespace Database {
                 prom->set_value(std::move(reply));
             } catch (...) {}
         };
-        request.on_error = [prom](const RedisError& err) {
+        request.on_error = [prom](const redis_error& err) {
             try {
                 prom->set_value(std::unexpected(err));
             } catch (...) {}
@@ -138,8 +138,8 @@ namespace Database {
         return future;
     }
 
-    std::future<std::expected<Redis::UniqueReply, RedisError> > Redis::execute_command(const std::string_view cmd, const std::string_view key, std::unordered_map<std::string, std::string> &&map) const noexcept {
-        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, RedisError>>>();
+    std::future<std::expected<Redis::UniqueReply, redis_error> > Redis::execute_command(const std::string_view cmd, const std::string_view key, std::unordered_map<std::string, std::string> &&map) const noexcept {
+        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, redis_error>>>();
         auto future = prom->get_future();
         RedisRequest request{};
         request.cmd = std::string(cmd);
@@ -153,7 +153,7 @@ namespace Database {
                 prom->set_value(std::move(reply));
             } catch (...) {}
         };
-        request.on_error = [prom](const RedisError& err) {
+        request.on_error = [prom](const redis_error& err) {
             try {
                 prom->set_value(std::unexpected(err));
             } catch (...) {}
@@ -166,8 +166,8 @@ namespace Database {
         return future;
     }
 
-    std::future<std::expected<Redis::UniqueReply, RedisError> > Redis::execute_command(const std::string_view cmd, const std::string_view key, std::unordered_set<std::string>&& set) const noexcept {
-        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, RedisError>>>();
+    std::future<std::expected<Redis::UniqueReply, redis_error> > Redis::execute_command(const std::string_view cmd, const std::string_view key, std::unordered_set<std::string>&& set) const noexcept {
+        auto prom = std::make_shared<std::promise<std::expected<UniqueReply, redis_error>>>();
         auto future = prom->get_future();
         RedisRequest request{};
         request.cmd = std::string(cmd);
@@ -180,7 +180,7 @@ namespace Database {
                 prom->set_value(std::move(reply));
             } catch (...) {}
         };
-        request.on_error = [prom](const RedisError& err) {
+        request.on_error = [prom](const redis_error& err) {
             try {
                 prom->set_value(std::unexpected(err));
             } catch (...) {}
@@ -253,12 +253,12 @@ namespace Database {
         }
     }
 
-    std::future<std::expected<Redis::SomeReplies, RedisError>> Redis::flush_pipeline() const noexcept {
+    std::future<std::expected<Redis::SomeReplies, redis_error>> Redis::flush_pipeline() const noexcept {
         std::deque<PipelineCommand> commands;
         {
             std::lock_guard sl(m_mutex);
             if (m_pipeline_buffer.empty()) {
-                std::promise<std::expected<SomeReplies, RedisError>> empty_promise{};
+                std::promise<std::expected<SomeReplies, redis_error>> empty_promise{};
                 auto future = empty_promise.get_future();
                 empty_promise.set_value({});
                 return future;
@@ -266,8 +266,8 @@ namespace Database {
             commands.swap(m_pipeline_buffer);
         }
 
-        std::promise<std::expected<SomeReplies, RedisError>> promise{};
-        std::future<std::expected<SomeReplies, RedisError>> future = promise.get_future();
+        std::promise<std::expected<SomeReplies, redis_error>> promise{};
+        std::future<std::expected<SomeReplies, redis_error>> future = promise.get_future();
         PipelineRequest request{};
         request.commands = std::move(commands);
         request.promise_ptr = std::move(promise);

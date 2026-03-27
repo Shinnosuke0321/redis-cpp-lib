@@ -16,7 +16,7 @@
 #include <functional>
 #include <thread>
 
-namespace Database {
+namespace database {
 
     struct RedisContextDeleter {
         void operator()(redisContext* ctx) const noexcept {
@@ -38,8 +38,8 @@ namespace Database {
         using UniqueContext = std::unique_ptr<redisContext, RedisContextDeleter>;
         using UniqueReply = std::unique_ptr<redisReply, RedisReplyDeleter>;
         using ResultCallback = std::function<void(UniqueReply)>;
-        using ErrorCallback = std::function<void(const RedisError &)>;
-        using Errors = std::deque<RedisError>;
+        using ErrorCallback = std::function<void(const redis_error &)>;
+        using Errors = std::deque<redis_error>;
         using SomeReplies = std::deque<UniqueReply>;
 
     public:
@@ -69,17 +69,17 @@ namespace Database {
         void execute_command_async(std::string_view cmd, std::string_view key, std::unordered_map<std::string, std::string>&& map, ResultCallback&& callback, ErrorCallback&& err_callback) const noexcept;
         void execute_command_async(std::string_view cmd, std::string_view key, std::unordered_set<std::string>&& set, ResultCallback&& callback, ErrorCallback&& err_callback) const noexcept;
 
-        std::future<std::expected<UniqueReply, RedisError>> execute_command(std::string_view cmd, std::string_view key) const noexcept;
-        std::future<std::expected<UniqueReply, RedisError>> execute_command(std::string_view cmd, std::string_view key, std::string_view str_val) const noexcept;
-        std::future<std::expected<UniqueReply, RedisError>> execute_command(std::string_view cmd, std::string_view key, std::unordered_map<std::string, std::string>&& map) const noexcept;
-        std::future<std::expected<UniqueReply, RedisError>> execute_command(std::string_view cmd, std::string_view key, std::unordered_set<std::string>&& set) const noexcept;
+        std::future<std::expected<UniqueReply, redis_error>> execute_command(std::string_view cmd, std::string_view key) const noexcept;
+        std::future<std::expected<UniqueReply, redis_error>> execute_command(std::string_view cmd, std::string_view key, std::string_view str_val) const noexcept;
+        std::future<std::expected<UniqueReply, redis_error>> execute_command(std::string_view cmd, std::string_view key, std::unordered_map<std::string, std::string>&& map) const noexcept;
+        std::future<std::expected<UniqueReply, redis_error>> execute_command(std::string_view cmd, std::string_view key, std::unordered_set<std::string>&& set) const noexcept;
 
         void append(std::string_view cmd, std::string_view key) const noexcept;
         void append(std::string_view cmd, std::string_view key, std::string_view str_val) const noexcept;
         void append(std::string_view cmd, std::string_view key, std::deque<std::string>&& params) const noexcept;
         void append(std::string_view cmd, std::string_view key, std::unordered_map<std::string, std::string>&& map) const noexcept;
         void append(std::string_view cmd, std::string_view key, std::unordered_set<std::string>&& set) const noexcept;
-        std::future<std::expected<SomeReplies, RedisError>> flush_pipeline() const noexcept;
+        std::future<std::expected<SomeReplies, redis_error>> flush_pipeline() const noexcept;
 
     private:
         struct RedisRequest {
@@ -90,7 +90,7 @@ namespace Database {
         };
         struct PipelineRequest {
             std::deque<PipelineCommand> commands{};
-            std::promise<std::expected<SomeReplies, RedisError>> promise_ptr;
+            std::promise<std::expected<SomeReplies, redis_error>> promise_ptr;
         };
         using QueueItem = std::variant<RedisRequest, PipelineRequest>;
     private:
