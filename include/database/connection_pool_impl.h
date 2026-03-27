@@ -19,7 +19,7 @@ namespace Core::Database {
         else {
             const auto init = m_config.init_size;
             const auto max  = m_config.max_size;
-            if (m_config.max_size > m_config.init_size) {
+            if (max > init) {
                 if (!m_capacity_expanded.exchange(true, std::memory_order_acq_rel)) {
                     m_capacity.release(static_cast<std::ptrdiff_t>(max - init));
                 }
@@ -50,7 +50,6 @@ namespace Core::Database {
             if (m_capacity.try_acquire()) {
                 auto conn_res = m_factory->create_connection<T>();
                 if (!conn_res) {
-                    LOG_ERROR << conn_res.error().to_str();
                     m_capacity.release();
                     std::this_thread::sleep_for(1000ms);
                     continue;
@@ -81,18 +80,22 @@ namespace Core::Database {
 
     template<class T>
     requires std::derived_from<T, IConnection>
-    void ConnectionPool<T>::wait_for_warmup() const noexcept {
+    void ConnectionPool<T>::wait_for_warmup() noexcept {
         using namespace std::literals;
         while (!m_pool_ready.load(std::memory_order_acquire)) {
             m_pool_ready.wait(false, std::memory_order_acquire);
         }
-        LOG_INFO << "Connection pool is warmup";
+        for (auto& t : m_threads) {
+            if (t.joinable()) t.join();
+        }
+        m_threads.clear();
     }
 
     template<class T> requires std::derived_from<T, IConnection>
     ConnectionPool<T>::~ConnectionPool() {
         for (auto& t : m_threads) {
             t.request_stop();
+            if (t.joinable()) t.join();
         }
     }
 
@@ -146,18 +149,16 @@ namespace Core::Database {
     template<class T>
     requires std::derived_from<T, IConnection>
     ConnectionManager<T> ConnectionPool<T>::wrap_connection(std::unique_ptr<T> c) noexcept {
-        std::weak_ptr<ConnectionPool> weak_self = this->weak_from_this();
+        smart_ptr::intrusive_ptr<ConnectionPool> instance = this->intrusive_from_this();
 
-        auto releaser = [weak_self](std::unique_ptr<T> returned_conn) noexcept {
+        auto releaser = [instance](std::unique_ptr<T> returned_conn) noexcept {
             if (!returned_conn)
                 return;
-            if (auto self = weak_self.lock()) {
-                {
-                    std::unique_lock<std::mutex> lk(self->m_mutex);
-                    self->m_connections.push(std::move(returned_conn));
-                }
-                self->m_capacity.release();
+            {
+                std::unique_lock<std::mutex> lk(instance->m_mutex);
+                instance->m_connections.push(std::move(returned_conn));
             }
+            instance->m_capacity.release();
         };
 
         return ConnectionManager<T>(std::move(c), std::move(releaser));
