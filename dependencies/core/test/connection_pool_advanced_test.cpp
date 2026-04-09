@@ -12,7 +12,7 @@
 using namespace std::chrono_literals;
 
 namespace {
-    struct FakeConn : Core::Database::IConnection {
+    struct FakeConn : core::database::IConnection {
         int id = 0;
         explicit FakeConn(int i = 0) : id(i) {}
     };
@@ -21,24 +21,24 @@ namespace {
 // Fixture: provides a ConnectionFactory pre-registered for FakeConn
 class PoolFeeder : public ::testing::Test {
 protected:
-    std::shared_ptr<Core::Database::ConnectionFactory> factory;
+    std::shared_ptr<core::database::ConnectionFactory> factory;
     std::atomic<int> conn_id_counter{0};
 
     void SetUp() override {
-        factory = std::make_shared<Core::Database::ConnectionFactory>();
-        factory->register_factory<FakeConn>([this]() -> Core::Database::ConnectionResult {
-            return std::unique_ptr<Core::Database::IConnection>(
+        factory = std::make_shared<core::database::ConnectionFactory>();
+        factory->register_factory<FakeConn>([this]() -> core::database::ConnectionResult {
+            return std::unique_ptr<core::database::IConnection>(
                 new FakeConn{conn_id_counter.fetch_add(1)});
         });
     }
 
-    auto make_pool(Core::Database::PoolConfig cfg) {
-        return smart_ptr::make_intrusive<Core::Database::ConnectionPool<FakeConn>>(factory, cfg);
+    auto make_pool(core::database::PoolConfig cfg) {
+        return smart_ptr::make_intrusive<core::database::ConnectionPool<FakeConn>>(factory, cfg);
     }
 };
 
 TEST_F(PoolFeeder, LazyMode_PoolReadyImmediately) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 2;
     cfg.max_size = 4;
@@ -50,7 +50,7 @@ TEST_F(PoolFeeder, LazyMode_PoolReadyImmediately) {
 }
 
 TEST_F(PoolFeeder, LazyMode_CanAcquireUpToMaxSize) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 0;
     cfg.max_size = 6;
@@ -58,7 +58,7 @@ TEST_F(PoolFeeder, LazyMode_CanAcquireUpToMaxSize) {
     auto pool = make_pool(cfg);
 
     // Acquire all 6 slots and hold them simultaneously
-    std::vector<Core::Database::ConnectionManager<FakeConn>> managers;
+    std::vector<core::database::ConnectionManager<FakeConn>> managers;
     managers.reserve(6);
     for (int i = 0; i < 6; ++i) {
         auto res = pool->acquire();
@@ -69,7 +69,7 @@ TEST_F(PoolFeeder, LazyMode_CanAcquireUpToMaxSize) {
 }
 
 TEST_F(PoolFeeder, Acquire_Timeout_WhenPoolExhausted) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 0;
     cfg.max_size = 2;
@@ -86,11 +86,11 @@ TEST_F(PoolFeeder, Acquire_Timeout_WhenPoolExhausted) {
     // Pool exhausted; acquire with zero timeout should return Timeout immediately
     auto r3 = pool->acquire(std::chrono::seconds{0});
     ASSERT_FALSE(r3.has_value());
-    ASSERT_EQ(r3.error().get_code(), Core::Database::ConnectionError::Type::Timeout);
+    ASSERT_EQ(r3.error().get_code(), core::connection_errc::Timeout);
 }
 
 TEST_F(PoolFeeder, Acquire_ConnectionReturned_IsReused) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 0;
     cfg.max_size = 1;
@@ -114,26 +114,26 @@ TEST_F(PoolFeeder, Acquire_ConnectionReturned_IsReused) {
 
 TEST_F(PoolFeeder, Acquire_FactoryFailure_ReturnsError) {
     // Override factory with one that always fails
-    auto fail_factory = std::make_shared<Core::Database::ConnectionFactory>();
-    fail_factory->register_factory<FakeConn>([]() -> Core::Database::ConnectionResult {
-        return std::unexpected(Core::Database::ConnectionError::AuthFailed("injected failure"));
+    auto fail_factory = std::make_shared<core::database::ConnectionFactory>();
+    fail_factory->register_factory<FakeConn>([]() -> core::database::ConnectionResult {
+        return std::unexpected(CONNECTION_ERROR(AuthFailed, "injected failure"));
     });
 
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 0;
     cfg.max_size = 2;
 
-    auto pool = smart_ptr::make_intrusive<Core::Database::ConnectionPool<FakeConn>>(fail_factory, cfg);
+    auto pool = smart_ptr::make_intrusive<core::database::ConnectionPool<FakeConn>>(fail_factory, cfg);
     auto res = pool->acquire();
     ASSERT_FALSE(res.has_value());
     // Must be the factory's error, not a timeout
-    ASSERT_EQ(res.error().get_code(), Core::Database::ConnectionError::Type::AuthFailed);
+    ASSERT_EQ(res.error().get_code(), core::connection_errc::AuthFailed);
 }
 
 TEST_F(PoolFeeder, InvalidConfig_EagerWithInitGtMax_FallsToLazy) {
     // init_size > max_size with is_eager=true: condition fails, constructor falls to lazy path
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = true;
     cfg.init_size = 10;
     cfg.max_size = 5;
@@ -149,7 +149,7 @@ TEST_F(PoolFeeder, InvalidConfig_EagerWithInitGtMax_FallsToLazy) {
 // ---------------------------------------------------------------------------
 
 TEST_F(PoolFeeder, RefCountTracking_LazyMode) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 1;
     cfg.max_size = 2;
@@ -167,12 +167,12 @@ TEST_F(PoolFeeder, RefCountTracking_LazyMode) {
 }
 
 TEST_F(PoolFeeder, PoolOutlivedByManager_NoUseAfterFree) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 0;
     cfg.max_size = 1;
 
-    std::optional<Core::Database::ConnectionManager<FakeConn>> mgr_holder;
+    std::optional<core::database::ConnectionManager<FakeConn>> mgr_holder;
     {
         auto pool = make_pool(cfg);
         auto res = pool->acquire();
@@ -193,7 +193,7 @@ TEST_F(PoolFeeder, PoolOutlivedByManager_NoUseAfterFree) {
 // ---------------------------------------------------------------------------
 
 TEST_F(PoolFeeder, ConcurrentAcquireRelease_NoRefLeak) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 0;
     cfg.max_size = 8;
@@ -223,7 +223,7 @@ TEST_F(PoolFeeder, ConcurrentAcquireRelease_NoRefLeak) {
 }
 
 TEST_F(PoolFeeder, HighContention_AllAcquiresSucceedOrTimeout) {
-    Core::Database::PoolConfig cfg;
+    core::database::PoolConfig cfg;
     cfg.is_eager = false;
     cfg.init_size = 0;
     cfg.max_size = 4;
