@@ -7,20 +7,24 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(REDIS_CPP_LIB_SHARED "Build redis-cpp-lib as a shared library" OFF)
 
+set(SOURCE
+        lib/src/redis_priv.cpp
+        lib/src/redis_pub.cpp
+        lib/src/reply.cpp
+        lib/src/transaction.cpp
+        lib/src/arg_buffer.cpp
+        lib/src/event_executer.cpp
+        lib/src/transport.cpp
+)
+
 if (REDIS_CPP_LIB_SHARED)
-    add_library(redis-cpp-lib SHARED
-            lib/src/redis_priv.cpp
-            lib/src/redis_pub.cpp
-    )
+    add_library(redis-cpp-lib SHARED ${SOURCE})
     # On Windows, export all symbols automatically for shared builds
     if (WIN32)
         set_target_properties(redis-cpp-lib PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
     endif ()
 else ()
-    add_library(redis-cpp-lib STATIC
-            lib/src/redis_priv.cpp
-            lib/src/redis_pub.cpp
-    )
+    add_library(redis-cpp-lib STATIC ${SOURCE})
 endif ()
 
 target_include_directories(redis-cpp-lib

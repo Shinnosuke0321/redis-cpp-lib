@@ -42,3 +42,7 @@ CTestTestfile.cmake
 _deps/
 
 CLAUDE.md
+
+update-subtree.sh
+
+tests/data/
