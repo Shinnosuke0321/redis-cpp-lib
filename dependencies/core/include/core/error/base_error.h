@@ -3,6 +3,8 @@
 //
 #pragma once
 #include <string>
+#include <format>
+#include <string_view>
 
 namespace core {
     class error_base {
