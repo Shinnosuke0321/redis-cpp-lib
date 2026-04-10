@@ -2,13 +2,15 @@
 // Created by Shinnosuke Kawai on 4/9/26.
 //
 #include "rediscxx/transport.h"
+
+#include "core/error/connection_error.h"
 #include "rediscxx/internal/arg_parser.h"
 
 namespace rediscxx {
     void transport::run_select_db() {
         auto select = std::make_shared<select_command>(
             m_connection_state.db_index,
-            [this](std::expected<void, connection_error> res) {
+            [this](std::expected<void, redis_exception> res) {
                 if (!res) {
                     m_connection_state.handler(std::unexpected(std::move(res.error())));
                     return;
@@ -24,7 +26,7 @@ namespace rediscxx {
     void transport::run_auth() {
         auto cmd = std::make_shared<auth_command>(
         m_connection_state.password.value(),
-        [this](std::expected<void, connection_error> res) {
+        [this](std::expected<void, redis_exception> res) {
             if (!res) {
                 m_connection_state.handler(std::unexpected(std::move(res.error())));
                 return;
@@ -40,7 +42,7 @@ namespace rediscxx {
     void transport::on_connect(const redisAsyncContext *ctx, const int state) noexcept {
         const auto self = static_cast<transport*>(ctx->data);
         if (state != REDIS_OK) {
-            self->m_connection_state.handler(std::unexpected(connection_error("Failed to connect")));
+            self->m_connection_state.handler(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to connect")));
             return;
         }
         if (self->m_connection_state.password) {
@@ -72,15 +74,15 @@ namespace rediscxx {
             m_connection_state.db_index = db_index;
             m_connection_state.handler = callback;
             if (redisLibeventAttach(m_ctx, m_exec->base()) != REDIS_OK) {
-                callback(std::unexpected(connection_error("Failed to attach libevent")));
+                callback(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to attach libevent")));
                 return;
             }
             if (redisAsyncSetConnectCallback(m_ctx, on_connect) != REDIS_OK) {
-                callback(std::unexpected(connection_error("Failed to set connect callback")));
+                callback(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to set connect callback")));
                 return;
             }
             if (redisAsyncSetDisconnectCallback(m_ctx, on_disconnect) != REDIS_OK) {
-                callback(std::unexpected(connection_error("Failed to set disconnect callback")));
+                callback(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to set disconnect callback")));
             }
         });
     }

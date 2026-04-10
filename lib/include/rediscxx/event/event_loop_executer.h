@@ -21,7 +21,7 @@ namespace rediscxx::event {
     public:
         event_loop_executer() = default;
 
-        std::expected<void, event_loop_error> init() noexcept {
+        std::expected<void, redis_exception> init() noexcept {
             static std::once_flag evthread_init;
             std::call_once(evthread_init, [] {
                 if (evthread_use_pthreads() < 0)

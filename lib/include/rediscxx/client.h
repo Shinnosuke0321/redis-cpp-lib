@@ -38,7 +38,7 @@ namespace rediscxx {
         }
     };
 
-    class client final : public Core::Database::IConnection, public core::ref_counted<client> {
+    class client final : public core::database::IConnection, public core::ref_counted<client> {
     public:
         struct config {
             std::string host;
@@ -62,11 +62,11 @@ namespace rediscxx {
         ~client() override;
 
     public:
-        std::expected<void, Core::Database::ConnectionError> connect() const noexcept;
+        std::expected<void, core::connection_error> connect() const noexcept;
 
         template<typename... Params>
         requires (internal::is_supported_type_v<Params> && ...)
-        std::future<std::expected<result::reply, command_error>> execute_command(const command cmd, Params&&... params) noexcept {
+        std::future<std::expected<result::reply, redis_exception>> execute_command(const command cmd, Params&&... params) noexcept {
         }
 
         template<typename... Params>
@@ -78,14 +78,6 @@ namespace rediscxx {
         requires (internal::is_supported_type_v<Params> && ...)
         void append(const command cmd, Params&& ...params) noexcept {
         }
-
-        std::future<std::expected<std::vector<result::reply>, pipeline_error>> execute_pipeline() noexcept;
-        std::future<std::expected<std::optional<std::deque<result::reply>>, transaction_error>> perform_transaction(std::function<void(transaction&)>&& executor) const noexcept;
-
-        void perform_transaction_async(
-            std::function<void(transaction&)>&& executor,
-            std::function<void(std::optional<std::deque<result::reply>>)>&& success_cb= nullptr,
-            std::function<void(transaction_error)>&& error_cb= nullptr) const noexcept;
 
         friend class pipeline_event;
         friend class transaction;
