@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include <database/connection_manager.h>
 
-using namespace core::database;
+using namespace database;
 
 namespace {
     struct SimpleConn : IConnection {

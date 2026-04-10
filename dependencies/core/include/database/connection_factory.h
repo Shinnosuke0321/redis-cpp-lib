@@ -11,7 +11,7 @@
 #include <functional>
 #include <cstring>
 
-namespace core::database {
+namespace database {
     class ConnectionFactory {
     public:
         explicit ConnectionFactory() = default;
@@ -51,7 +51,9 @@ namespace core::database {
                 const auto it = m_factories.find(type_id);
                 if (it == m_factories.end()) {
                     std::string message = std::format("No factory registered for type {}", type_id.name());
-                    return std::unexpected(CONNECTION_ERROR(FactoryNotRegistered, std::move(message)));
+                    using namespace core;
+                    using conn_err_types::FactoryNotRegistered;
+                    return std::unexpected(MAKE_UNEXPECTED_ERROR(connection_error, FactoryNotRegistered, std::move(message)));
                 };
                 factory = it->second;
             }

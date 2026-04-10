@@ -15,7 +15,7 @@
 #include "connection_manager.h"
 #include <core/memory/intrusive_ptr.h>
 
-namespace core::database {
+namespace database {
     struct PoolConfig {
         std::size_t max_size = std::thread::hardware_concurrency();
         std::size_t init_size = 10;
@@ -24,7 +24,7 @@ namespace core::database {
 
     template<class T>
     requires std::derived_from<T, IConnection>
-    class ConnectionPool: public ref_counted<ConnectionPool<T>> {
+    class ConnectionPool: public core::ref_counted<ConnectionPool<T>> {
     public:
         using SharedFactory = std::shared_ptr<ConnectionFactory>;
         using AcquireResult = std::expected<ConnectionManager<T>, connection_error>;

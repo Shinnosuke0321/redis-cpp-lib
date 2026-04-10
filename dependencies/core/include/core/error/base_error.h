@@ -5,8 +5,10 @@
 #include <string>
 #include <format>
 #include <string_view>
+#include <concepts>
+#include "exception.h"
 
-namespace core {
+namespace core::error {
     class error_base {
     public:
         virtual ~error_base() = default;
@@ -16,28 +18,43 @@ namespace core {
         virtual std::string_view code_string() const noexcept = 0;
         virtual std::string to_string() const noexcept = 0;
     };
-    template<typename Derived, typename Enum>
-    class typed_error : public error_base {
-    public:
-        using code_type = Enum;
 
-        typed_error(Enum code, std::string msg)
-            : m_code(code), m_message(std::move(msg)) {}
+    template<typename derived>
+    concept typed_error_trait = requires {
+        { derived::category_name() } -> std::same_as<std::string_view>;
+    };
+
+    template<typename derived, typename enum_type>
+    class typed_error : public error_base {
+        static void _check() {
+            static_assert(typed_error_trait<derived>,
+            "Derived must implement:\n"
+            "  static std::string_view category_name()");
+        }
+    public:
+        using code_type = enum_type;
+
+        typed_error(enum_type code, std::string code_str, std::string msg)
+        : m_code(code),
+          m_code_str(std::move(code_str)),
+          m_message(std::move(msg)) {
+            _check();
+        }
 
         std::string_view message() const noexcept override {
             return m_message;
         }
 
-        Enum get_code() const noexcept {
+        enum_type get_code() const noexcept {
             return m_code;
         }
 
         std::string_view category() const noexcept override {
-            return Derived::category_name();
+            return derived::category_name();
         }
 
         std::string_view code_string() const noexcept override {
-            return Derived::code_to_string(m_code);
+            return m_code_str;
         }
 
         std::string to_string() const noexcept override {
@@ -48,13 +65,25 @@ namespace core {
             );
         }
 
+        exception to_exception() const noexcept {
+            return exception{
+                std::string(category()),
+                std::string(code_string()),
+                std::string(message())
+            };
+        }
+        ~typed_error() override = default;
+
     protected:
-        Enum m_code;
+        enum_type m_code;
+        std::string m_code_str;
         std::string m_message;
     };
-
-#define ERROR_CATEGORY_NAME(name) \
-    using base = typed_error; \
-    using base::base; \
-    static std::string_view category_name() noexcept { return #name;}
 }
+
+#define ERROR_CLASS_CATEGORY(name) \
+    using base = typed_error; using base::base; \
+    static std::string_view category_name() noexcept { return #name; }
+
+#define MAKE_UNEXPECTED_ERROR(category_class, type, message) \
+    category_class{type, #type, message}

@@ -4,9 +4,9 @@
 #pragma once
 #include <expected>
 #include <memory>
-#include <core/error/connection_error.h>
+#include "connection_error.h"
 
-namespace core::database {
+namespace database {
     struct IConnection {
         virtual ~IConnection() = default;
     };
