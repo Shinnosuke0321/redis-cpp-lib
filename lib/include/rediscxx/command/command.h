@@ -7,6 +7,7 @@
 #include <hiredis/async.h>
 #include <functional>
 #include <core/memory/intrusive_ptr.h>
+#include <core/error/connection_error.h>
 
 namespace rediscxx {
     enum class command {

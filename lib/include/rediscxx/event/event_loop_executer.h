@@ -9,19 +9,29 @@
 #include <queue>
 #include <expected>
 #include <thread>
-#include "rediscxx/exception.h"
 #include <core/memory/intrusive_ptr.h>
+#include "core/error/base_error.h"
 
 namespace rediscxx::event {
     struct executer_base {
         virtual ~executer_base() = default;
         virtual void post(std::function<void()>&& fn) = 0;
     };
+
+    enum class event_loop_error_code {
+    };
+
+    class event_loop_error: public core::typed_error<event_loop_error, event_loop_error_code> {
+    public:
+        ERROR_CATEGORY_NAME(event_loop);
+
+    };
+
     class event_loop_executer: public executer_base, public core::ref_counted<event_loop_executer> {
     public:
         event_loop_executer() = default;
 
-        std::expected<void, redis_exception> init() noexcept {
+        std::expected<void, std::unique_ptr<core::error_base>> init() noexcept {
             static std::once_flag evthread_init;
             std::call_once(evthread_init, [] {
                 if (evthread_use_pthreads() < 0)
@@ -29,7 +39,7 @@ namespace rediscxx::event {
             });
             m_base = event_base_new();
             if (!m_base)
-                return std::unexpected(event_loop_error("Failed to init event_base"));
+                return std::unexpected(std::make_unique<>("Failed to init event_base"));
 
             m_wakeup_event = event_new(m_base, -1, 0,
                 [](evutil_socket_t, short, void* arg) {
