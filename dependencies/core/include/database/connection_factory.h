@@ -50,10 +50,10 @@ namespace database {
                 std::shared_lock lock(m_shared_mutex);
                 const auto it = m_factories.find(type_id);
                 if (it == m_factories.end()) {
-                    std::string message = std::format("No factory registered for type {}", type_id.name());
                     using namespace core;
                     using conn_err_types::FactoryNotRegistered;
-                    return std::unexpected(MAKE_UNEXPECTED_ERROR(connection_error, FactoryNotRegistered, std::move(message)));
+                    std::string message = std::format("No factory registered for type {}", type_id.name());
+                    RETURN_UNEXPECTED_ERROR(connection_error, FactoryNotRegistered, std::move(message));
                 };
                 factory = it->second;
             }

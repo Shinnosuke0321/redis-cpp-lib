@@ -118,7 +118,7 @@ namespace database {
 
             const auto now = clock::now();
             if (now >= deadline) {
-                return std::unexpected(MAKE_UNEXPECTED_ERROR(connection_error, conn_err_types::Timeout, "Timed out waiting for a connection"));
+                RETURN_UNEXPECTED_ERROR(connection_error, conn_err_types::Timeout, "Timed out waiting for a connection");
             }
             const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
 
@@ -142,7 +142,7 @@ namespace database {
                 }
                 return wrap_connection(std::move(result.value()));
             }
-            return std::unexpected(MAKE_UNEXPECTED_ERROR(connection_error, conn_err_types::Timeout, "Timed out waiting for a connection"));
+            RETURN_UNEXPECTED_ERROR(connection_error, conn_err_types::Timeout, "Timed out waiting for a connection");
         }
     }
 

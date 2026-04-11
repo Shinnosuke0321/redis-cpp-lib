@@ -33,7 +33,7 @@ TEST_F(ConnectionFactoryTest, CreateAfterRegistration_Succeeds) {
 
 TEST_F(ConnectionFactoryTest, FactoryReturningError_Propagates) {
     factory.register_factory<ConnA>([]() -> ConnectionResult {
-        return std::unexpected(MAKE_UNEXPECTED_ERROR(database::connection_error, database::conn_err_types::AuthFailed, "bad creds"));
+        RETURN_UNEXPECTED_ERROR(database::connection_error, database::conn_err_types::AuthFailed, "bad creds");
     });
 
     auto result = factory.create_connection<ConnA>();
