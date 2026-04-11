@@ -11,12 +11,12 @@
 #include <event2/thread.h>
 #include <hiredis/adapters/libevent.h>
 #include <hiredis/async.h>
-#include "request.h"
 #include "result/reply.h"
 #include "transaction.h"
 #include <core/memory/intrusive_ptr.h>
 #include "transport.h"
 #include "event/event_loop_executer.h"
+#include "internal/arg_parser.h"
 
 namespace rediscxx {
 
@@ -38,7 +38,7 @@ namespace rediscxx {
         }
     };
 
-    class client final : public core::database::IConnection, public core::ref_counted<client> {
+    class client final : public database::IConnection, public core::ref_counted<client> {
     public:
         struct config {
             std::string host;
@@ -62,31 +62,15 @@ namespace rediscxx {
         ~client() override;
 
     public:
-        std::expected<void, core::connection_error> connect() const noexcept;
+        std::expected<void, core::error::exception> connect() const noexcept;
 
         template<typename... Params>
         requires (internal::is_supported_type_v<Params> && ...)
-        std::future<std::expected<result::reply, redis_exception>> execute_command(const command cmd, Params&&... params) noexcept {
-        }
-
-        template<typename... Params>
-        requires (internal::is_supported_type_v<Params> && ...)
-        void execute_command_async(result_callback&& callback, error_callback&& err_callback, const command cmd, Params&&... params) const noexcept {
-        }
-
-        template<typename... Params>
-        requires (internal::is_supported_type_v<Params> && ...)
-        void append(const command cmd, Params&& ...params) noexcept {
+        std::future<std::expected<result::reply, error::redis_exception>> execute_command(const command cmd, Params&&... params) noexcept {
         }
 
         friend class pipeline_event;
         friend class transaction;
-
-    private:
-        static void ConnectCallback(const redisAsyncContext* ctx, int status);
-        static void AuthInit(const redisAsyncContext* ctx) noexcept;
-        static void SelectDbIndex(const redisAsyncContext* ac) noexcept;
-        void Handle(single_request &request) const noexcept;
 
     private:
         config m_config;

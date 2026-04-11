@@ -3,14 +3,14 @@
 //
 #include "rediscxx/transport.h"
 
-#include "core/error/connection_error.h"
+#include <database/connection_error.h>
 #include "rediscxx/internal/arg_parser.h"
 
 namespace rediscxx {
     void transport::run_select_db() {
         auto select = std::make_shared<select_command>(
             m_connection_state.db_index,
-            [this](std::expected<void, redis_exception> res) {
+            [this](std::expected<void, error::redis_exception> res) {
                 if (!res) {
                     m_connection_state.handler(std::unexpected(std::move(res.error())));
                     return;
@@ -26,7 +26,7 @@ namespace rediscxx {
     void transport::run_auth() {
         auto cmd = std::make_shared<auth_command>(
         m_connection_state.password.value(),
-        [this](std::expected<void, redis_exception> res) {
+        [this](std::expected<void, error::redis_exception> res) {
             if (!res) {
                 m_connection_state.handler(std::unexpected(std::move(res.error())));
                 return;
@@ -42,7 +42,9 @@ namespace rediscxx {
     void transport::on_connect(const redisAsyncContext *ctx, const int state) noexcept {
         const auto self = static_cast<transport*>(ctx->data);
         if (state != REDIS_OK) {
-            self->m_connection_state.handler(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to connect")));
+            using namespace error;
+            using error_code::network_error;
+            self->m_connection_state.handler(std::unexpected(MAKE_UNEXPECTED_ERROR(redis_exception, network_error, "Failed to connect")));
             return;
         }
         if (self->m_connection_state.password) {
@@ -55,6 +57,8 @@ namespace rediscxx {
 
     }
     void transport::connect_async(std::string host, const int port, std::optional<std::string> password, const int db_index, on_connected&& callback) noexcept {
+        using namespace error;
+        using error_code::EventLoopAttachFailed, error_code::CallbackRegistrationFailed;
         m_exec->post([this, host = std::move(host), port, password = std::move(password), db_index, callback = std::move(callback)] {
             redisOptions options = {};
             // 1. TCP connection
@@ -74,15 +78,15 @@ namespace rediscxx {
             m_connection_state.db_index = db_index;
             m_connection_state.handler = callback;
             if (redisLibeventAttach(m_ctx, m_exec->base()) != REDIS_OK) {
-                callback(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to attach libevent")));
+                callback(std::unexpected(MAKE_UNEXPECTED_ERROR(redis_exception, EventLoopAttachFailed, "Failed to attach libevent")));
                 return;
             }
             if (redisAsyncSetConnectCallback(m_ctx, on_connect) != REDIS_OK) {
-                callback(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to set connect callback")));
+                callback(std::unexpected(MAKE_UNEXPECTED_ERROR(redis_exception, CallbackRegistrationFailed, "Failed to set connect callback")));
                 return;
             }
             if (redisAsyncSetDisconnectCallback(m_ctx, on_disconnect) != REDIS_OK) {
-                callback(std::unexpected(CONNECTION_ERROR(ConnectionFailed, "Failed to set disconnect callback")));
+                callback(std::unexpected(MAKE_UNEXPECTED_ERROR(redis_exception, CallbackRegistrationFailed, "Failed to set disconnect callback")));
             }
         });
     }

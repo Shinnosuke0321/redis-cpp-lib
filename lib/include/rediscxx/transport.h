@@ -5,12 +5,12 @@
 #include <future>
 #include "event/event_loop_executer.h"
 #include "command/command.h"
-#include "core/error/connection_error.h"
+#include "error/exception.h"
 
 namespace rediscxx {
     class transport: public core::ref_counted<transport> {
     public:
-        using on_connected = std::function<void(std::expected<void, core::connection_error>)>;
+        using on_connected = std::function<void(std::expected<void, error::redis_exception>)>;
     public:
         explicit transport(smart_ptr::intrusive_ptr<event::event_loop_executer> event_executer)
         : m_exec(std::move(event_executer)) {}

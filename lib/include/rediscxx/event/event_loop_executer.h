@@ -18,20 +18,21 @@ namespace rediscxx::event {
         virtual void post(std::function<void()>&& fn) = 0;
     };
 
-    enum class event_loop_error_code {
+    enum class ev_err_types {
+        BaseInitFailed,
     };
 
-    class event_loop_error: public core::typed_error<event_loop_error, event_loop_error_code> {
+    class event_loop_error: public core::error::typed_error<event_loop_error, ev_err_types> {
     public:
-        ERROR_CATEGORY_NAME(event_loop);
-
+        ERROR_CLASS_CATEGORY(event_loop)
+        ~event_loop_error() override = default;
     };
 
     class event_loop_executer: public executer_base, public core::ref_counted<event_loop_executer> {
     public:
         event_loop_executer() = default;
 
-        std::expected<void, std::unique_ptr<core::error_base>> init() noexcept {
+        std::expected<void, event_loop_error> init() noexcept {
             static std::once_flag evthread_init;
             std::call_once(evthread_init, [] {
                 if (evthread_use_pthreads() < 0)
@@ -39,7 +40,7 @@ namespace rediscxx::event {
             });
             m_base = event_base_new();
             if (!m_base)
-                return std::unexpected(std::make_unique<>("Failed to init event_base"));
+                return std::unexpected(MAKE_UNEXPECTED_ERROR(event_loop_error, ev_err_types::BaseInitFailed, "Failed to create event base"));
 
             m_wakeup_event = event_new(m_base, -1, 0,
                 [](evutil_socket_t, short, void* arg) {

@@ -1,7 +1,6 @@
 //
 // Created by Shinnosuke Kawai on 4/4/26.
 //
-#include "rediscxx/event/pipeline_event.h"
 #include "suites/pipeline_suite.h"
 
 TEST_F(PipelineTest, InsertKeys) {
