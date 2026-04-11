@@ -118,7 +118,7 @@ TEST_F(PoolFeeder, Acquire_FactoryFailure_ReturnsError) {
     fail_factory->register_factory<FakeConn>([]() -> database::ConnectionResult {
         using namespace database;
         using conn_err_types::AuthFailed;
-        return std::unexpected(MAKE_UNEXPECTED_ERROR(connection_error, AuthFailed, "injected failure"));
+        RETURN_UNEXPECTED_ERROR(connection_error, AuthFailed, "injected failure");
     });
 
     database::PoolConfig cfg;
