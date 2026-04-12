@@ -8,6 +8,13 @@
 #include "error/exception.h"
 
 namespace rediscxx {
+    struct async_ctx_deleter {
+        void operator()(redisAsyncContext* ctx) const noexcept {
+            if (ctx) {
+                redisAsyncFree(ctx);
+            }
+        }
+    };
     class transport: public core::ref_counted<transport> {
     public:
         using on_connected = std::function<void(std::expected<void, error::redis_exception>)>;
@@ -18,13 +25,9 @@ namespace rediscxx {
         void connect_async(std::string host, int port, std::optional<std::string> password, int db_index, on_connected&& callback) noexcept;
 
         redisAsyncContext* get_ctx() const noexcept {
-            return m_ctx;
+            return m_ctx.get();
         }
-        ~transport() override {
-            if (m_ctx) {
-                redisAsyncDisconnect(m_ctx);
-            }
-        }
+        ~transport() override = default;
     private:
         struct connection_state {
             std::optional<std::string> password = std::nullopt;
@@ -33,11 +36,12 @@ namespace rediscxx {
         };
         static void on_connect(const redisAsyncContext* ctx, int state) noexcept;
         static void on_disconnect(const redisAsyncContext* ctx, int state) noexcept;
-        void run_auth();
-        void run_select_db();
+        void on_connect_failed() noexcept;
+        void run_auth() noexcept;
+        void run_select_db() noexcept;
     private:
         smart_ptr::intrusive_ptr<event::event_loop_executer> m_exec;
-        redisAsyncContext* m_ctx = nullptr;
+        std::unique_ptr<redisAsyncContext, async_ctx_deleter> m_ctx;
         connection_state m_connection_state{};
     };
 }

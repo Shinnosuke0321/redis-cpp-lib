@@ -41,19 +41,19 @@ namespace rediscxx {
         void execute(redisAsyncContext *ctx) override {
             if (auto self = this->intrusive_from_this();
                 redisAsyncCommand(ctx, on_callback, new smart_ptr::intrusive_ptr(std::move(self)), "AUTH %s", m_password.c_str()) != REDIS_OK) {
-                m_handler(std::unexpected(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::error_code::command_error, "failed to send auth")));
+                m_handler(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::code::command_error, "failed to send auth"));
             }
         }
 
     private:
         static void on_callback(redisAsyncContext *ctx, void *r, void *priv) {
-            const auto self = *static_cast<smart_ptr::intrusive_ptr<auth_command>*>(priv);
-            delete static_cast<smart_ptr::intrusive_ptr<auth_command>*>(priv);
+            const auto self = std::move(*static_cast<smart_ptr::intrusive_ptr<auth_command>*>(priv));
+            // delete static_cast<smart_ptr::intrusive_ptr<auth_command>*>(priv);
             if (const auto *reply = static_cast<redisReply*>(r); !reply) {
-                self->m_handler(std::unexpected(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::error_code::command_error, "reply is null")));
+                self->m_handler(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::code::command_error, "reply is null"));
             }
             else if (reply->type == REDIS_REPLY_ERROR) {
-                self->m_handler(std::unexpected(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::error_code::command_error, reply->str)));
+                self->m_handler(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::code::command_error, reply->str));
             }
             else {
                 self->m_handler({});
@@ -75,18 +75,18 @@ namespace rediscxx {
         void execute(redisAsyncContext *ctx) override {
             if (auto self = this->intrusive_from_this();
                 redisAsyncCommand(ctx, on_callback, new smart_ptr::intrusive_ptr(std::move(self)), "SELECT %d", m_index) != REDIS_OK) {
-                m_handler(std::unexpected(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::error_code::command_error, "failed to send select")));
+                m_handler(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::code::command_error, "failed to send select"));
             }
         }
         ~select_command() override = default;
     private:
         static void on_callback(redisAsyncContext *ctx, void *r, void *priv) {
-            const auto* self = static_cast<select_command*>(priv);
+            const auto self = std::move(*static_cast<smart_ptr::intrusive_ptr<select_command>*>(priv));
             if (const auto *reply = static_cast<redisReply*>(r); !reply) {
-                self->m_handler(std::unexpected(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::error_code::command_error, "reply is null")));
+                self->m_handler(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::code::command_error, "reply is null"));
             }
             else if (reply->type == REDIS_REPLY_ERROR) {
-                self->m_handler(std::unexpected(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::error_code::command_error, reply->str)));
+                self->m_handler(MAKE_UNEXPECTED_ERROR(error::redis_exception, error::code::command_error, reply->str));
             }
             else {
                 self->m_handler({});

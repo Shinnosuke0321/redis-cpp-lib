@@ -19,25 +19,6 @@
 #include "internal/arg_parser.h"
 
 namespace rediscxx {
-
-    class pipeline_event;
-
-    struct context_deleter {
-        void operator()(redisAsyncContext* ctx) const {
-            if (ctx) {
-                redisAsyncFree(ctx);
-            }
-        }
-    };
-
-    struct ev_loop_deleter {
-        void operator()(event_base* ev) const {
-            if (ev) {
-                event_base_free(ev);
-            }
-        }
-    };
-
     class client final : public database::IConnection, public core::ref_counted<client> {
     public:
         struct config {
@@ -49,10 +30,12 @@ namespace rediscxx {
     public:
         explicit client(const config& config)
         : m_config(config),
+          m_event_executer(smart_ptr::make_intrusive<event::event_loop_executer>()),
           m_transport(smart_ptr::make_intrusive<transport>(m_event_executer->intrusive_from_this())) {}
 
         explicit client(config&& config)
         : m_config(std::move(config)),
+          m_event_executer(smart_ptr::make_intrusive<event::event_loop_executer>()),
           m_transport(smart_ptr::make_intrusive<transport>(m_event_executer->intrusive_from_this())) {}
 
         client(const client&) = delete;

@@ -20,16 +20,8 @@ namespace rediscxx {
             m_watch_keys.push_back(std::move(key));
         }
 
-        template<typename ...Params>
-        requires (internal::is_supported_type_v<Params> && ...)
-        void enqueue(const command cmd, Params&& ...params) noexcept {
-            internal::arg_buffer buf = internal::to_args(command_to_string(cmd), std::forward<Params>(params)...);
-            m_queued_commands.emplace_back(std::move(buf));
-        }
-
         void discard() noexcept {
             m_watch_keys.clear();
-            m_queued_commands.clear();
         }
 
     public:
@@ -40,10 +32,6 @@ namespace rediscxx {
         ~transaction() = default;
 
     private:
-        std::future<std::expected<std::optional<std::deque<result::reply>>, exception>> exec() noexcept;
-
-        void exec(std::function<void(std::optional<std::deque<result::reply>>)>&& success_cb,
-                  std::function<void(exception)>&& error_cb) noexcept;
 
     private:
         struct passkey {
@@ -57,6 +45,5 @@ namespace rediscxx {
         friend class client;
         const client* m_client;
         std::vector<std::string> m_watch_keys{};
-        std::deque<single_request> m_queued_commands{};
     };
 }

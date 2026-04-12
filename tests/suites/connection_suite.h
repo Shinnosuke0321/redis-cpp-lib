@@ -4,12 +4,13 @@
 #pragma once
 #include "redis_cxx_suite.h"
 
-class ConnectionTest: public RedisCxxTest {
+class ConnectionTest: public testing::Test {
 protected:
     void SetUp() override {
-        RedisCxxTest::SetUp();
+        // RedisCxxTest::SetUp();
+        // throw std::runtime_error("test");
     }
     void TearDown() override {
-        RedisCxxTest::TearDown();
+        // RedisCxxTest::TearDown();
     }
 };
