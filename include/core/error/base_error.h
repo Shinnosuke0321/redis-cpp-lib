@@ -8,11 +8,21 @@
 #include <concepts>
 #include "exception.h"
 
+#define COPY_SEMANTICS(class_name, keyword) \
+    class_name(const class_name&) = keyword; \
+    class_name& operator=(const class_name&) = keyword
+
+#define MOVE_SEMANTICS(class_name, keyword) \
+    class_name(class_name&&) noexcept = keyword; \
+    class_name& operator=(class_name&&) noexcept = keyword
+
 namespace core::error {
     class error_base {
     public:
         virtual ~error_base() = default;
-
+        error_base() = default;
+        COPY_SEMANTICS(error_base, default);
+        MOVE_SEMANTICS(error_base, default);
         virtual std::string_view message() const noexcept = 0;
         virtual std::string_view category() const noexcept = 0;
         virtual std::string_view code_string() const noexcept = 0;
@@ -34,8 +44,12 @@ namespace core::error {
     public:
         using code_type = enum_type;
 
+        MOVE_SEMANTICS(typed_error, default);
+        COPY_SEMANTICS(typed_error, default);
+
         typed_error(enum_type code, std::string code_str, std::string msg)
-        : m_code(code),
+        : error_base(),
+          m_code(code),
           m_code_str(std::move(code_str)),
           m_message(std::move(msg)) {
             _check();
