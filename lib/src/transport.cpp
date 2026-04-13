@@ -4,6 +4,7 @@
 #include "rediscxx/transport.h"
 #include <database/connection_error.h>
 #include "rediscxx/internal/arg_parser.h"
+#include "rediscxx/command/set_command.h"
 
 namespace rediscxx {
     void transport::run_select_db() noexcept{
@@ -40,8 +41,9 @@ namespace rediscxx {
 
     void transport::on_connect_failed() noexcept {
         redisAsyncContext* ctx = this->m_ctx.release();
-        this->m_connection_state.handler(error::from_ctx(ctx));
+        this->m_connection_state.handler(std::unexpected(error::from_ctx(ctx)));
         redisAsyncDisconnect(ctx);
+        redisAsyncFree(ctx);
     }
 
     void transport::on_connect(const redisAsyncContext *ctx, const int state) noexcept {
@@ -59,10 +61,13 @@ namespace rediscxx {
     }
     void transport::on_disconnect(const redisAsyncContext *ctx, const int status) noexcept {
         std::println("on_disconnect fired");
+        if (status != REDIS_OK) {
+
+        }
     }
     void transport::connect_async(std::string host, const int port, std::optional<std::string> password, const int db_index, on_connected&& callback) noexcept {
         using namespace error;
-        using code::EventLoopAttachFailed, code::CallbackRegistrationFailed, code::AsyncConnectFailed;
+        using types::EventLoopAttachFailed, types::CallbackRegistrationFailed, types::AsyncConnectFailed;
         m_exec->post([this, host = std::move(host), port, password = std::move(password), db_index, callback = std::move(callback)] {
             redisOptions options = {};
             // 1. TCP connection
@@ -100,5 +105,21 @@ namespace rediscxx {
             }
             m_ctx = std::move(ctx);
         });
+    }
+
+    void transport::execute_cmd_async(const command cmd, internal::arg_buffer &&args, std::function<void(std::expected<result::reply, error::redis_exception>)> &&fn) const {
+        if (cmd == command::set) {
+            const auto set_cmd = smart_ptr::make_intrusive<set_command>(std::move(args), std::move(fn));
+            m_exec->post([this, set_cmd] {
+                set_cmd->execute(m_ctx.get());
+            });
+        } else if (cmd == command::get) {
+            const auto set_cmd = smart_ptr::make_intrusive<get_command>(std::move(args), std::move(fn));
+            m_exec->post([this, set_cmd] {
+                set_cmd->execute(m_ctx.get());
+            });
+        } else {
+            throw std::runtime_error("Not supported command");
+        }
     }
 }

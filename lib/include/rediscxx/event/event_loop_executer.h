@@ -26,7 +26,7 @@ namespace rediscxx::event {
 
     class event_loop_error: public core::error::typed_error<event_loop_error, ev_err_types> {
     public:
-        ERROR_CLASS_CATEGORY(event_loop)
+        ERROR_CLASS_CATEGORY(EventLoop)
         ~event_loop_error() override = default;
     };
 
@@ -44,7 +44,7 @@ namespace rediscxx::event {
             });
             m_base = event_base_new();
             if (!m_base)
-                RETURN_UNEXPECTED_ERROR(event_loop_error, ev_err_types::BaseInitFailed, "Failed to create event base");
+                return MAKE_UNEXPECTED_ERROR(event_loop_error, ev_err_types::BaseInitFailed, "Failed to create event base");
 
             m_wakeup_event = event_new(m_base, -1, EV_PERSIST,
                 [](evutil_socket_t, short, void* arg) {
@@ -54,11 +54,11 @@ namespace rediscxx::event {
             );
 
             if (!m_wakeup_event) {
-                RETURN_UNEXPECTED_ERROR(event_loop_error, ev_err_types::EventInitFailed, "Failed to create wakeup event");
+                return MAKE_UNEXPECTED_ERROR(event_loop_error, ev_err_types::EventInitFailed, "Failed to create wakeup event");
             }
 
             if (event_add(m_wakeup_event, nullptr) != 0) {
-                RETURN_UNEXPECTED_ERROR(event_loop_error, ev_err_types::EventRegistrationFailed, "Failed to register wakeup event");
+                return MAKE_UNEXPECTED_ERROR(event_loop_error, ev_err_types::EventRegistrationFailed, "Failed to register wakeup event");
             }
 
             std::atomic_bool ready{false};
@@ -83,25 +83,23 @@ namespace rediscxx::event {
         }
 
         void post(std::function<void()>&& fn) override {
-            std::println("post()");
             if (std::this_thread::get_id() == m_thread_id) {
                 std::println("already on event thread");
                 fn(); // already on event thread
                 return;
             }
             {
-                std::println("Locking m_tasks");
                 std::lock_guard lk(m_mtx);
                 m_tasks.push(std::move(fn));
             }
-            event_active(m_wakeup_event, 0, 0);
+            if (m_wakeup_event)
+                event_active(m_wakeup_event, 0, 0);
         }
 
         event_base* base() const { return m_base; }
 
     private:
         void drain() {
-            std::println("drain()");
             std::queue<std::function<void()>> local;
             {
                 std::lock_guard lk(m_mtx);
@@ -111,13 +109,19 @@ namespace rediscxx::event {
                 local.front()();
                 local.pop();
             }
+            // Break the loop from within the event thread only after all tasks
+            // have been drained, so no queued task is silently dropped on shutdown.
+            if (m_stopping.load(std::memory_order_acquire))
+                event_base_loopbreak(m_base);
         }
 
         void stop() {
             if (m_stopping.exchange(true))
                 return;
-            event_base_loopbreak(m_base);
-            event_active(m_wakeup_event, 0, 0);
+            // Activate one final drain; drain() will call event_base_loopbreak
+            // once the queue is empty, ensuring all pending tasks execute first.
+            if (m_wakeup_event)
+                event_active(m_wakeup_event, 0, 0);
 
             if (m_worker_thread.joinable())
                 m_worker_thread.join();

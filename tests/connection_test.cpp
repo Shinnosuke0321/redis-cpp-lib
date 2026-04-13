@@ -5,10 +5,8 @@
 #include <rediscxx/client.h>
 
 TEST_F(RedisCxxTest, SuccessfullWithValidConfig) {
-    std::println("Running SuccessfullWithValidConfig");
     rediscxx::client::config config{"127.0.0.1", 6379, "redis-auth-password", 1};
     rediscxx::client client(std::move(config));
-    std::println("Running client::connect()");
     std::expected<void, core::error::exception> result = client.connect();
     ASSERT_TRUE(result.has_value()) << result.error().to_what();
     std::println("{} ms", timer.elapsed_milliseconds());
@@ -34,6 +32,15 @@ TEST_F(RedisCxxTest, WrongPort) {
 
 TEST_F(RedisCxxTest, WrongHost) {
     rediscxx::client::config config{"123.1.2.3", 6379, "redis-auth-password",1};
+    rediscxx::client client(std::move(config));
+    std::expected<void, core::error::exception> result = client.connect();
+    ASSERT_FALSE(result.has_value());
+    std::println("{}", result.error().to_what());
+    std::println("{} ms", timer.elapsed_milliseconds());
+}
+
+TEST_F(RedisCxxTest, InvalidDbIndex) {
+    rediscxx::client::config config{"127.0.0.1", 6379, "redis-auth-password",123};
     rediscxx::client client(std::move(config));
     std::expected<void, core::error::exception> result = client.connect();
     ASSERT_FALSE(result.has_value());

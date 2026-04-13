@@ -7,11 +7,6 @@
 #include <gtest/gtest.h>
 #include <rediscxx/client.h>
 
-#define CREATE_CLIENT(config) \
-    rediscxx::client client(config); \
-    auto result = client.connect(); \
-    ASSERT_TRUE(result.has_value()) << result.error().to_str()
-
 class RedisCxxTest: public testing::Test {
 protected:
     void SetUp() override {

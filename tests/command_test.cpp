@@ -3,27 +3,33 @@
 //
 #include "suites/command_suite.h"
 
-// TEST_F(RedisCommandTest, SetCommand) {
-//     CREATE_CLIENT(m_config);
-//     auto future = client.execute_command(rediscxx::command::set, "RedisCommand", "SetCommand");
-//     auto expected = future.get();
-//     ASSERT_TRUE(expected.has_value()) << expected.error().to_str();
-//     rediscxx::result::reply& reply = expected.value();
-//     ASSERT_EQ(reply.as_string().value(), "OK");
-//     timer.print_elapsed_time();
-// }
-//
-// TEST_F(RedisCommandTest, GetCommand) {
-//     CREATE_CLIENT(m_config);
-//     auto future = client.execute_command(rediscxx::command::get, "RedisCommand");
-//
-//     auto res = future.get();
-//     ASSERT_TRUE(res.has_value()) << res.error().to_str();
-//     rediscxx::result::reply& reply = res.value();
-//     ASSERT_TRUE(reply.as_string().has_value());
-//     ASSERT_EQ(reply.as_string().value(), "SetCommand");
-//     timer.print_elapsed_time();
-// }
+#define CREATE_CLIENT(config) \
+    rediscxx::client client(config); \
+    auto result = client.connect(); \
+    ASSERT_TRUE(result.has_value()) << result.error().to_what()
+
+
+TEST_F(RedisCommandTest, SetCommand) {
+    CREATE_CLIENT(m_config);
+    auto future = client.execute_command(rediscxx::command::set, "RedisCommand", "SetCommand");
+    auto expected = future.get();
+    ASSERT_TRUE(expected) << expected.error().to_string();
+    rediscxx::result::reply& reply = expected.value();
+    ASSERT_EQ(reply.as_string().value(), "OK");
+    timer.print_elapsed_time();
+}
+
+TEST_F(RedisCommandTest, GetCommand) {
+    CREATE_CLIENT(m_config);
+    auto future = client.execute_command(rediscxx::command::get, "RedisCommand");
+
+    auto res = future.get();
+    ASSERT_TRUE(res.has_value()) << res.error().to_string();
+    rediscxx::result::reply& reply = res.value();
+    ASSERT_TRUE(reply.as_string().has_value());
+    ASSERT_EQ(reply.as_string().value(), "SetCommand");
+    timer.print_elapsed_time();
+}
 //
 // TEST_F(RedisCommandTest, KeyWithNoValue) {
 //     CREATE_CLIENT(m_config);

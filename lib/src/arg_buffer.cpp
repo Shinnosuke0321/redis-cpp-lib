@@ -10,7 +10,6 @@ namespace rediscxx::internal {
         for (const auto& s : args)
             total += s.size();
         result.m_storage.reserve(total);
-        result.m_lens.reserve(args.size());
 
         for (const auto& s : args) {
             result.m_storage += s;
@@ -29,5 +28,9 @@ namespace rediscxx::internal {
             offset += len;
         }
         return argv;
+    }
+    void arg_buffer::append_at_front(std::string str) noexcept {
+        m_lens.push_front(str.size());
+        m_storage.insert(m_storage.begin(), str.begin(), str.end());
     }
 }

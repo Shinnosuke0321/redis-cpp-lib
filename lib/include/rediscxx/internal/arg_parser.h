@@ -3,7 +3,6 @@
 //
 #pragma once
 #include <array>
-#include <print>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -11,24 +10,25 @@
 #include <unordered_set>
 #include <vector>
 #include "arg_buffer.h"
+#include "rediscxx/command/base_command.h"
 
 namespace rediscxx::internal {
 
     // --- Compile-time type support traits ---
-
     template<typename T>
     struct is_supported_type : std::bool_constant<std::is_arithmetic_v<T>> {};
 
+    template<> struct is_supported_type<command>          : std::true_type {};
     template<> struct is_supported_type<std::string>      : std::true_type {};
-    template<> struct is_supported_type<std::string_view>: std::true_type {};
-    template<> struct is_supported_type<const char*>     : std::true_type {};
-    template<> struct is_supported_type<char*>           : std::true_type {};
+    template<> struct is_supported_type<std::string_view> : std::true_type {};
+    template<> struct is_supported_type<const char*>      : std::true_type {};
+    template<> struct is_supported_type<char*>            : std::true_type {};
 
     template<typename T>
-    struct is_supported_type<std::vector<T>>             : std::true_type {};
+    struct is_supported_type<std::vector<T>>              : std::true_type {};
 
     template<typename T, std::size_t N>
-    struct is_supported_type<std::array<T, N>>           : std::true_type {};
+    struct is_supported_type<std::array<T, N>>             : std::true_type {};
 
     template<typename V>
     struct is_supported_type<std::unordered_map<std::string, V>> : std::true_type {};
@@ -40,6 +40,10 @@ namespace rediscxx::internal {
     inline constexpr bool is_supported_type_v = is_supported_type<std::decay_t<T>>::value;
 
     // --- String conversion helpers (collect into a temp vector) ---
+
+    inline void append_as_strings(std::vector<std::string>& out, const command val) {
+        out.emplace_back(command_to_str(val));
+    }
 
     inline void append_as_strings(std::vector<std::string>& out, const std::string& val) {
         out.push_back(val);

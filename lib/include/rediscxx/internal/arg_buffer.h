@@ -3,18 +3,23 @@
 //
 
 #pragma once
+#include <deque>
 #include <string>
+#include <deque>
 
 namespace rediscxx::internal {
     class arg_buffer {
     public:
         static arg_buffer from_list(std::vector<std::string>&& args) noexcept;
-        [[nodiscard]]
-        int argc() const noexcept { return static_cast<int>(m_lens.size()); }
-        [[nodiscard]]
+        int argc() const noexcept {
+            return static_cast<int>(m_lens.size());
+        }
+        std::vector<size_t> argvlen() const noexcept {
+            return {m_lens.begin(), m_lens.end()};
+        }
         std::vector<const char*> argv() const noexcept;
-        [[nodiscard]]
-        const std::vector<size_t>& argvlen() const noexcept { return m_lens; }
+
+        void append_at_front(std::string str) noexcept;
     public:
         arg_buffer(arg_buffer&& other) noexcept
         : m_storage(std::move(other.m_storage)),
@@ -31,6 +36,6 @@ namespace rediscxx::internal {
     private:
         arg_buffer() = default;
         std::string m_storage;
-        std::vector<std::size_t> m_lens;
+        std::deque<std::size_t> m_lens;
     };
 }

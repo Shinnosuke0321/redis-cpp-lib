@@ -9,7 +9,7 @@
 #include <optional>
 #include <vector>
 #include <string>
-#include "command/command.h"
+#include "command/base_command.h"
 
 namespace rediscxx {
     class client;

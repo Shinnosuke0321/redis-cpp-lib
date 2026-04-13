@@ -5,9 +5,7 @@
 #include "rediscxx/client.h"
 
 namespace rediscxx {
-    client::~client() {
-
-    }
+    client::~client() = default;
 
     std::expected<void, core::error::exception> client::connect() const noexcept {
 

@@ -4,8 +4,12 @@
 #pragma once
 #include <future>
 #include "event/event_loop_executer.h"
-#include "command/command.h"
+#include "command/auth_command.h"
+#include "command/select_command.h"
 #include "error/exception.h"
+#include "internal/arg_buffer.h"
+#include "result/reply.h"
+#include "rediscxx/command/command_creater.h"
 
 namespace rediscxx {
     struct async_ctx_deleter {
@@ -24,6 +28,7 @@ namespace rediscxx {
 
         void connect_async(std::string host, int port, std::optional<std::string> password, int db_index, on_connected&& callback) noexcept;
 
+        void execute_cmd_async(command cmd, internal::arg_buffer&& args, std::function<void(std::expected<result::reply, error::redis_exception>)>&& fn) const;
         redisAsyncContext* get_ctx() const noexcept {
             return m_ctx.get();
         }

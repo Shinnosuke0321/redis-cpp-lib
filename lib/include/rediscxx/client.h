@@ -21,6 +21,8 @@
 namespace rediscxx {
     class client final : public database::IConnection, public core::ref_counted<client> {
     public:
+        using on_success = std::function<void(result::reply)>;
+        using on_error = std::function<void(error::redis_exception)>;
         struct config {
             std::string host;
             int port;
@@ -50,10 +52,32 @@ namespace rediscxx {
         template<typename... Params>
         requires (internal::is_supported_type_v<Params> && ...)
         std::future<std::expected<result::reply, error::redis_exception>> execute_command(const command cmd, Params&&... params) noexcept {
+            auto promise = std::make_shared<std::promise<std::expected<result::reply, error::redis_exception>>>();
+            auto fut = promise->get_future();
+            internal::arg_buffer args = internal::to_args(std::forward<Params>(params)...);
+            m_transport->execute_cmd_async(cmd, std::move(args), [promise](std::expected<result::reply, error::redis_exception> expected_res) {
+                promise->set_value(std::move(expected_res));
+            });
+            return fut;
         }
 
-        friend class pipeline_event;
-        friend class transaction;
+        template<typename... Params>
+        requires (internal::is_supported_type_v<Params> && ...)
+        void execute_command(on_success&& on_success, on_error&& on_error, const command cmd, Params&&... params) noexcept {
+            auto promise = std::make_shared<std::promise<std::expected<result::reply, error::redis_exception>>>();
+            auto fut = promise->get_future();
+            internal::arg_buffer args = internal::to_args(std::forward<Params>(params)...);
+            m_transport->execute_cmd_async(
+                cmd, std::move(args),
+                [on_success = std::move(on_success), on_error = std::move(on_error)](std::expected<result::reply, error::redis_exception> expected_res) {
+                    if (expected_res) {
+                        on_success(std::move(expected_res.value()));
+                    } else {
+                        on_error(std::move(expected_res.error()));
+                    }
+            });
+        }
+
 
     private:
         config m_config;
