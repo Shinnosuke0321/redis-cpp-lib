@@ -9,7 +9,16 @@
 #include "error/exception.h"
 #include "internal/arg_buffer.h"
 #include "result/reply.h"
-#include "rediscxx/command/command_creater.h"
+#include "command/get_command.h"
+#include "command/set_command.h"
+#include "command/hash_set/hset.h"
+#include "command/hash_set/hget.h"
+#include "command/hash_set/hgetall.h"
+#include "command/flush_db_command.h"
+#include "command/set/sadd.h"
+#include "command/set/srem.h"
+#include "command/set/smembers.h"
+#include "rediscxx/command/command_dispatcher.h"
 
 namespace rediscxx {
     struct async_ctx_deleter {

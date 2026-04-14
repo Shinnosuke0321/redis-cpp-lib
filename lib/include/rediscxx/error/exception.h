@@ -8,7 +8,9 @@
 namespace rediscxx::error {
     enum class types {
         Unknown = 0,
-        NullReply, AuthCommand, SelectCommand, SetCommand, GetCommand, HSetCommand, HGetAllCommand, SAddCommand, SMembersCommand, SRemCommand,
+        NullReply, AuthCommand, SelectCommand, SetCommand, GetCommand,
+        HSetCommand, HGetAllCommand, SAddCommand, SMembersCommand, SRemCommand,
+        FlushDbCommand, HGetCommand, HDelCommand,
         CallbackRegistrationFailed, EventLoopAttachFailed, AsyncConnectFailed,
         IO, EndOfFile, ProtocolErr, OutOfMemory, Timeout, Other,
     };
@@ -16,6 +18,8 @@ namespace rediscxx::error {
     class redis_exception: public core::error::typed_error<redis_exception, types> {
     public:
         ERROR_CLASS_CATEGORY(Redis)
+        COPY_SEMANTICS(redis_exception, default);
+        MOVE_SEMANTICS(redis_exception, default);
         ~redis_exception() override = default;
     };
 

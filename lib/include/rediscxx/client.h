@@ -64,8 +64,6 @@ namespace rediscxx {
         template<typename... Params>
         requires (internal::is_supported_type_v<Params> && ...)
         void execute_command(on_success&& on_success, on_error&& on_error, const command cmd, Params&&... params) noexcept {
-            auto promise = std::make_shared<std::promise<std::expected<result::reply, error::redis_exception>>>();
-            auto fut = promise->get_future();
             internal::arg_buffer args = internal::to_args(std::forward<Params>(params)...);
             m_transport->execute_cmd_async(
                 cmd, std::move(args),

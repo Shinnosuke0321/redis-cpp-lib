@@ -97,7 +97,7 @@ namespace rediscxx::result {
     }
 
     std::optional<std::unordered_set<std::string>> reply::as_set() const noexcept {
-        if (m_type != REDIS_REPLY_SET)
+        if (m_type != REDIS_REPLY_ARRAY)
             return std::nullopt;
         std::unordered_set<std::string> result;
         result.reserve(m_elements.size());

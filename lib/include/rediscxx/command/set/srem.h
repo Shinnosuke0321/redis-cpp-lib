@@ -1,35 +1,34 @@
 //
-// Created by Shinnosuke Kawai on 4/13/26.
+// Created by Shinnosuke Kawai on 4/14/26.
 //
 
 #pragma once
-#include "base_command.h"
+#include "rediscxx/command/base_command.h"
 
 namespace rediscxx {
-    class get_command: public command_base, public core::ref_counted<get_command> {
+    class srem_command: public command_base, public core::ref_counted<srem_command> {
     public:
         using on_callback = std::function<void(std::expected<result::reply, error::redis_exception>)>;
     public:
-        COMMAND_CLASS_TYPE(get)
+        COMMAND_CLASS_TYPE(srem)
 
-        explicit get_command(internal::arg_buffer&& args, on_callback&& handler)
+        explicit srem_command(internal::arg_buffer&& args, on_callback&& handler)
         : m_args(std::move(args)), m_handler(std::move(handler)) {
-            m_args.append_at_front(get_command::to_string());
+            m_args.append_at_front(srem_command::to_string());
         }
 
         void execute(redisAsyncContext *ctx) override {
             const auto argc = m_args.argc();
             auto argv = m_args.argv();
             auto argvlen = m_args.argvlen();
-            if (auto intrusive_self = this->intrusive_from_this();
-                redisAsyncCommandArgv(ctx, on_handle, new smart_ptr::intrusive_ptr(std::move(intrusive_self)), argc, argv.data(), argvlen.data()) != REDIS_OK) {
+            if (auto intrusive_self = this->intrusive_from_this(); redisAsyncCommandArgv(ctx, on_handle, new smart_ptr::intrusive_ptr(std::move(intrusive_self)), argc, argv.data(), argvlen.data()) != REDIS_OK) {
                 m_handler(std::unexpected(error::from_ctx(ctx)));
-                }
+            }
         }
     private:
         static void on_handle(redisAsyncContext *ctx, void *r, void *priv) noexcept {
-            const auto self = std::move(*static_cast<smart_ptr::intrusive_ptr<get_command>*>(priv));
-            delete static_cast<smart_ptr::intrusive_ptr<get_command>*>(priv);
+            const auto self = std::move(*static_cast<smart_ptr::intrusive_ptr<srem_command>*>(priv));
+            delete static_cast<smart_ptr::intrusive_ptr<srem_command>*>(priv);
             using error::types::SetCommand;
             if (const auto *reply = static_cast<redisReply*>(r); !reply) {
                 self->m_handler(std::unexpected(error::from_ctx(ctx)));
@@ -42,7 +41,7 @@ namespace rediscxx {
             }
         }
     private:
-        internal::arg_buffer m_args;
+    internal::arg_buffer m_args;
         std::function<void(std::expected<result::reply, error::redis_exception>)> m_handler = nullptr;
-    };
+    };;
 }

@@ -2,9 +2,6 @@
 // Created by Shinnosuke Kawai on 4/9/26.
 //
 #include "rediscxx/transport.h"
-#include <database/connection_error.h>
-#include "rediscxx/internal/arg_parser.h"
-#include "rediscxx/command/set_command.h"
 
 namespace rediscxx {
     void transport::run_select_db() noexcept{
@@ -108,18 +105,33 @@ namespace rediscxx {
     }
 
     void transport::execute_cmd_async(const command cmd, internal::arg_buffer &&args, std::function<void(std::expected<result::reply, error::redis_exception>)> &&fn) const {
-        if (cmd == command::set) {
-            const auto set_cmd = smart_ptr::make_intrusive<set_command>(std::move(args), std::move(fn));
-            m_exec->post([this, set_cmd] {
-                set_cmd->execute(m_ctx.get());
-            });
-        } else if (cmd == command::get) {
-            const auto set_cmd = smart_ptr::make_intrusive<get_command>(std::move(args), std::move(fn));
-            m_exec->post([this, set_cmd] {
-                set_cmd->execute(m_ctx.get());
-            });
-        } else {
-            throw std::runtime_error("Not supported command");
-        }
+        command_dispatcher dispatcher(cmd, std::move(args), std::move(fn));
+        dispatcher.dispatch<set_command>([this](smart_ptr::intrusive_ptr<set_command> set_cmd) {
+            m_exec->post([this, set_cmd = std::move(set_cmd)] { set_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<get_command>([this](smart_ptr::intrusive_ptr<get_command> get_cmd) {
+            m_exec->post([this, get_cmd = std::move(get_cmd)] { get_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<hset_command>([this](smart_ptr::intrusive_ptr<hset_command> hset_cmd) {
+            m_exec->post([this, hset_cmd = std::move(hset_cmd)] { hset_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<flush_db_command>([this](smart_ptr::intrusive_ptr<flush_db_command> flush_cmd) {
+            m_exec->post([this, flush_cmd = std::move(flush_cmd)] { flush_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<hget_command>([this](smart_ptr::intrusive_ptr<hget_command> hget_cmd) {
+            m_exec->post([this, hget_cmd = std::move(hget_cmd)] { hget_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<hgetall_command>([this](smart_ptr::intrusive_ptr<hgetall_command> hgetall_cmd) {
+            m_exec->post([this, hgetall_cmd = std::move(hgetall_cmd)] { hgetall_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<sadd_command>([this](smart_ptr::intrusive_ptr<sadd_command> sadd_cmd) {
+            m_exec->post([this, sadd_cmd = std::move(sadd_cmd)] { sadd_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<srem_command>([this](smart_ptr::intrusive_ptr<srem_command> srem_cmd) {
+            m_exec->post([this, srem_cmd = std::move(srem_cmd)] { srem_cmd->execute(m_ctx.get());});
+        });
+        dispatcher.dispatch<smembers_command>([this](smart_ptr::intrusive_ptr<smembers_command> smembers_cmd) {
+            m_exec->post([this, smembers_cmd = std::move(smembers_cmd)] { smembers_cmd->execute(m_ctx.get());});
+        });
     }
 }

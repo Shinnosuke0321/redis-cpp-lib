@@ -1,20 +1,20 @@
 //
-// Created by Shinnosuke Kawai on 4/13/26.
+// Created by Shinnosuke Kawai on 4/14/26.
 //
 
 #pragma once
-#include "base_command.h"
+#include "rediscxx/command/base_command.h"
 
 namespace rediscxx {
-    class get_command: public command_base, public core::ref_counted<get_command> {
+    class sadd_command: public command_base, public core::ref_counted<sadd_command> {
     public:
         using on_callback = std::function<void(std::expected<result::reply, error::redis_exception>)>;
     public:
-        COMMAND_CLASS_TYPE(get)
+        COMMAND_CLASS_TYPE(sadd)
 
-        explicit get_command(internal::arg_buffer&& args, on_callback&& handler)
+        explicit sadd_command(internal::arg_buffer&& args, on_callback&& handler)
         : m_args(std::move(args)), m_handler(std::move(handler)) {
-            m_args.append_at_front(get_command::to_string());
+            m_args.append_at_front(sadd_command::to_string());
         }
 
         void execute(redisAsyncContext *ctx) override {
@@ -28,8 +28,8 @@ namespace rediscxx {
         }
     private:
         static void on_handle(redisAsyncContext *ctx, void *r, void *priv) noexcept {
-            const auto self = std::move(*static_cast<smart_ptr::intrusive_ptr<get_command>*>(priv));
-            delete static_cast<smart_ptr::intrusive_ptr<get_command>*>(priv);
+            const auto self = std::move(*static_cast<smart_ptr::intrusive_ptr<sadd_command>*>(priv));
+            delete static_cast<smart_ptr::intrusive_ptr<sadd_command>*>(priv);
             using error::types::SetCommand;
             if (const auto *reply = static_cast<redisReply*>(r); !reply) {
                 self->m_handler(std::unexpected(error::from_ctx(ctx)));
@@ -44,5 +44,5 @@ namespace rediscxx {
     private:
         internal::arg_buffer m_args;
         std::function<void(std::expected<result::reply, error::redis_exception>)> m_handler = nullptr;
-    };
+    };;
 }

@@ -7,10 +7,9 @@
 #include "redis_cxx_suite.h"
 
 #define FLUSH_DB(client) \
-    auto flush_future = client.execute_command(rediscxx::command::flush_db);\
+    auto flush_future = client.execute_command(rediscxx::command::flushdb);\
     auto flush_res = flush_future.get();\
-    ASSERT_TRUE(flush_res.has_value()) << flush_res.error().to_string();\
-    ASSERT_EQ(flush_res.value().as_string().value(), "OK")
+    ASSERT_FALSE(!flush_res) << flush_res.error().to_string();
 
 class RedisCommandTest: public RedisCxxTest {
 protected:

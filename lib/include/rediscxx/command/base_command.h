@@ -7,14 +7,15 @@
 
 namespace rediscxx {
     enum class command {
-        set, get, hset, hgetall, sadd, smembers, auth, select,
-        srem, exat, expireat, hget, flush_all, flush_db, del,
+        set, get, hset, hget, hgetall, auth, select,
+        srem, sadd, smembers, exat, expireat, flushall, flushdb, del,
         multi, exec, discard, watch
     };
 
 #define COMMAND_CLASS_TYPE(cmd) \
+    static command get_static_type() noexcept { return command::cmd; } \
     std::string_view get_name() const noexcept override { return #cmd; } \
-    command get_cmd_type() const noexcept override { return command::cmd; }; \
+    command get_cmd_type() const noexcept override { return get_static_type(); }; \
     std::string to_string() const noexcept override { return std::string(get_name());}
 
     class  command_base {
@@ -40,8 +41,8 @@ namespace rediscxx {
             case command::exat: return "exat";
             case command::expireat: return "expireat";
             case command::hget: return "hget";
-            case command::flush_all: return "flush_all";
-            case command::flush_db: return "flush_db";
+            case command::flushall: return "flush_all";
+            case command::flushdb: return "flush_db";
             case command::del: return "del";
             case command::multi: return "multi";
             case command::exec: return "exec";
