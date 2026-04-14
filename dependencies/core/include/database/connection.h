@@ -5,13 +5,15 @@
 #include <expected>
 #include <string>
 #include <memory>
+#include <format>
+#include <core/error/base_error.h>
 
 namespace Core::Database {
     struct IConnection {
         virtual ~IConnection() = default;
     };
 
-    struct ConnectionError {
+    struct ConnectionError: BaseError {
         enum class Type {
             ConnectionFailed, MissingConfig, FactoryNotRegistered, Timeout, SocketFailed, AuthFailed
         };
@@ -34,14 +36,26 @@ namespace Core::Database {
             return ConnectionError{Type::AuthFailed, str};
         }
 
-        std::string& to_str() & noexcept { return m_message; }
+        std::string to_str() const noexcept override {
+            return std::format("ConnectionError [{}]: {}", type_str(), m_message);
+        }
 
         Type get_code() const noexcept { return type; }
     private:
-        ConnectionError(const Type type, std::string message) : type(type), m_message(std::move(message)) {}
         ConnectionError(const Type type, const char* message) : type(type), m_message(message) {}
         ConnectionError(const Type type, std::string&& message) : type(type), m_message(std::move(message)) {}
 
+        std::string type_str() const noexcept {
+            switch (type) {
+                case Type::ConnectionFailed: return "ConnectionFailed";
+                case Type::MissingConfig: return "MissingConfig";
+                case Type::FactoryNotRegistered: return "FactoryNotRegistered";
+                case Type::Timeout: return "Timeout";
+                case Type::SocketFailed: return "SocketFailed";
+                case Type::AuthFailed: return "AuthFailed";
+            }
+            return "Unknown";
+        }
     private:
         Type type;
         std::string m_message{};

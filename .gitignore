@@ -41,5 +41,8 @@ install_manifest.txt
 CTestTestfile.cmake
 _deps/
 
-# FetchContent downloaded dependencies
-_deps/
+CLAUDE.md
+
+update-subtree.sh
+
+tests/data/
