@@ -3,46 +3,59 @@
 //
 #pragma once
 #include "base_command.h"
-#include "rediscxx/error/exception.h"
 
 namespace rediscxx {
-    class set_command: public command_base, public core::ref_counted<set_command> {
+    class auth_command: public base_command {
     public:
-        using on_callback = std::function<void(std::expected<result::reply, error::redis_exception>)>;
+        COMMAND_CLASS_TYPE(auth, AuthCommand);
+    };
+    class select_command: public base_command {
     public:
-        COMMAND_CLASS_TYPE(set)
+        COMMAND_CLASS_TYPE(select, SelectCommand);
+    };
+    class flush_db_command : public base_command {
+    public:
+        COMMAND_CLASS_TYPE(flushdb, FlushDbCommand)
+    };
+    class set_command: public base_command {
+    public:
+        COMMAND_CLASS_TYPE(set, SetCommand)
+    };
+    class get_command: public base_command {
+    public:
+        COMMAND_CLASS_TYPE(get, GetCommand);
+    };
+    class hget_command : public base_command {
+    public:
+        COMMAND_CLASS_TYPE(hget, HGetCommand);
+    };
 
-        explicit set_command(internal::arg_buffer&& args, on_callback&& handler)
-        : m_args(std::move(args)), m_handler(std::move(handler)) {
-            m_args.append_at_front(set_command::to_string());
-        }
+    class hgetall_command : public base_command {
+    public:
+        COMMAND_CLASS_TYPE(hgetall, HGetAllCommand);
+    };
 
-        void execute(redisAsyncContext *ctx) override {
-            const auto argc = m_args.argc();
-            auto argv = m_args.argv();
-            auto argvlen = m_args.argvlen();
-            if (auto intrusive_self = this->intrusive_from_this();
-                redisAsyncCommandArgv(ctx, on_handle, new smart_ptr::intrusive_ptr(std::move(intrusive_self)), argc, argv.data(), argvlen.data()) != REDIS_OK) {
-                m_handler(std::unexpected(error::from_ctx(ctx)));
-            }
-        }
-    private:
-        static void on_handle(redisAsyncContext *ctx, void *r, void *priv) noexcept {
-            const auto self = std::move(*static_cast<smart_ptr::intrusive_ptr<set_command>*>(priv));
-            delete static_cast<smart_ptr::intrusive_ptr<set_command>*>(priv);
-            using error::types::SetCommand;
-            if (const auto *reply = static_cast<redisReply*>(r); !reply) {
-                self->m_handler(std::unexpected(error::from_ctx(ctx)));
-            }
-            else if (reply->type == REDIS_REPLY_ERROR) {
-                self->m_handler(MAKE_UNEXPECTED_ERROR(error::redis_exception, SetCommand, reply->str));
-            }
-            else {
-                self->m_handler(result::reply::from_raw(reply));
-            }
-        }
-    private:
-        internal::arg_buffer m_args;
-        std::function<void(std::expected<result::reply, error::redis_exception>)> m_handler = nullptr;
+    class hset_command : public base_command {
+    public:
+        COMMAND_CLASS_TYPE(hset, HSetCommand)
+    };
+
+    class sadd_command: public base_command {
+    public:
+        COMMAND_CLASS_TYPE(sadd, SAddCommand)
+    };
+
+    class smembers_command: public base_command {
+    public:
+        COMMAND_CLASS_TYPE(smembers, SMembersCommand)
+    };
+    class srem_command: public base_command {
+    public:
+        COMMAND_CLASS_TYPE(srem, SRemCommand)
+    };
+    class exat_command: public base_command {
+    public:
+        COMMAND_CLASS_TYPE(exat, ExatCommand);
+        ~exat_command() override = default;
     };
 }

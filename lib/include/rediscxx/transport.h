@@ -19,6 +19,7 @@
 #include "command/set/srem.h"
 #include "command/set/smembers.h"
 #include "rediscxx/command/command_dispatcher.h"
+#include "rediscxx/command/expiry/exat_expireat.h"
 
 namespace rediscxx {
     struct async_ctx_deleter {

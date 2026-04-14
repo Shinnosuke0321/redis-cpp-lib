@@ -19,7 +19,7 @@ namespace rediscxx::internal {
         }
         std::vector<const char*> argv() const noexcept;
 
-        void append_at_front(std::string str) noexcept;
+        void append_at_front(std::string_view str) noexcept;
     public:
         arg_buffer(arg_buffer&& other) noexcept
         : m_storage(std::move(other.m_storage)),

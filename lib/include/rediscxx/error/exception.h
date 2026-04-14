@@ -10,7 +10,7 @@ namespace rediscxx::error {
         Unknown = 0,
         NullReply, AuthCommand, SelectCommand, SetCommand, GetCommand,
         HSetCommand, HGetAllCommand, SAddCommand, SMembersCommand, SRemCommand,
-        FlushDbCommand, HGetCommand, HDelCommand,
+        FlushDbCommand, HGetCommand, HDelCommand, ExatCommand, ExpireAtCommand,
         CallbackRegistrationFailed, EventLoopAttachFailed, AsyncConnectFailed,
         IO, EndOfFile, ProtocolErr, OutOfMemory, Timeout, Other,
     };

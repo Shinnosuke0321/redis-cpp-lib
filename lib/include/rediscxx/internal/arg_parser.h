@@ -14,6 +14,30 @@
 
 namespace rediscxx::internal {
 
+    inline std::string_view command_to_str(const command cmd) noexcept {
+        switch (cmd) {
+            case command::set: return "set";
+            case command::get: return "get";
+            case command::hset: return "hset";
+            case command::hgetall: return "hgetall";
+            case command::sadd: return "sadd";
+            case command::smembers: return "smembers";
+            case command::auth: return "auth";
+            case command::select: return "select";
+            case command::srem: return "srem";
+            case command::exat: return "exat";
+            case command::expireat: return "expireat";
+            case command::hget: return "hget";
+            case command::flushall: return "flush_all";
+            case command::flushdb: return "flush_db";
+            case command::del: return "del";
+            case command::multi: return "multi";
+            case command::exec: return "exec";
+            case command::discard: return "discard";
+            case command::watch: return "watch";
+        }
+        return "";
+    }
     // --- Compile-time type support traits ---
     template<typename T>
     struct is_supported_type : std::bool_constant<std::is_arithmetic_v<T>> {};

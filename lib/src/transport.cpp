@@ -5,35 +5,38 @@
 
 namespace rediscxx {
     void transport::run_select_db() noexcept{
-        auto select = smart_ptr::make_intrusive<select_command>(
-            m_connection_state.db_index,
-            [this](std::expected<void, error::redis_exception> res) {
+        command_dispatcher dispatcher(command::select);
+        std::string db_index = std::to_string(m_connection_state.db_index);
+        auto db_index_arg = internal::arg_buffer::from_list({std::move(db_index)});
+        dispatcher.dispatch(
+            std::move(db_index_arg),
+            [this](std::expected<result::reply, error::redis_exception> res) {
                 if (!res) {
                     m_connection_state.handler(std::unexpected(std::move(res.error())));
                     return;
                 }
                 m_connection_state.handler({});
-            });;
-
-        m_exec->post([this, select] {
-            select->execute(m_ctx.get());
+        },
+        [this](auto cmd_exe) {
+            m_exec->post([this, cmd_exe = std::move(cmd_exe)] { cmd_exe->execute(m_ctx.get());});
         });
     }
 
     void transport::run_auth() noexcept{
-        auto cmd = smart_ptr::make_intrusive<auth_command>(
-        m_connection_state.password.value(),
-        [this](std::expected<void, error::redis_exception> res) {
-            if (!res) {
-                m_connection_state.handler(std::unexpected(std::move(res.error())));
-                return;
-            }
-            run_select_db();
-        });
-
-        m_exec->post([this, cmd] {
-            cmd->execute(m_ctx.get());
-        });
+        command_dispatcher dispatcher(command::auth);
+        auto password_arg = internal::arg_buffer::from_list({m_connection_state.password.value()});
+        dispatcher.dispatch(
+            std::move(password_arg),
+            [this](std::expected<result::reply, error::redis_exception> res) {
+                if (!res) {
+                    m_connection_state.handler(std::unexpected(std::move(res.error())));
+                    return;
+                }
+                run_select_db();
+            },
+            [this](auto cmd_exe) {
+                m_exec->post([this, cmd_exe = std::move(cmd_exe)] { cmd_exe->execute(m_ctx.get());});
+            });
     }
 
     void transport::on_connect_failed() noexcept {
@@ -105,33 +108,10 @@ namespace rediscxx {
     }
 
     void transport::execute_cmd_async(const command cmd, internal::arg_buffer &&args, std::function<void(std::expected<result::reply, error::redis_exception>)> &&fn) const {
-        command_dispatcher dispatcher(cmd, std::move(args), std::move(fn));
-        dispatcher.dispatch<set_command>([this](smart_ptr::intrusive_ptr<set_command> set_cmd) {
-            m_exec->post([this, set_cmd = std::move(set_cmd)] { set_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<get_command>([this](smart_ptr::intrusive_ptr<get_command> get_cmd) {
-            m_exec->post([this, get_cmd = std::move(get_cmd)] { get_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<hset_command>([this](smart_ptr::intrusive_ptr<hset_command> hset_cmd) {
-            m_exec->post([this, hset_cmd = std::move(hset_cmd)] { hset_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<flush_db_command>([this](smart_ptr::intrusive_ptr<flush_db_command> flush_cmd) {
-            m_exec->post([this, flush_cmd = std::move(flush_cmd)] { flush_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<hget_command>([this](smart_ptr::intrusive_ptr<hget_command> hget_cmd) {
-            m_exec->post([this, hget_cmd = std::move(hget_cmd)] { hget_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<hgetall_command>([this](smart_ptr::intrusive_ptr<hgetall_command> hgetall_cmd) {
-            m_exec->post([this, hgetall_cmd = std::move(hgetall_cmd)] { hgetall_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<sadd_command>([this](smart_ptr::intrusive_ptr<sadd_command> sadd_cmd) {
-            m_exec->post([this, sadd_cmd = std::move(sadd_cmd)] { sadd_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<srem_command>([this](smart_ptr::intrusive_ptr<srem_command> srem_cmd) {
-            m_exec->post([this, srem_cmd = std::move(srem_cmd)] { srem_cmd->execute(m_ctx.get());});
-        });
-        dispatcher.dispatch<smembers_command>([this](smart_ptr::intrusive_ptr<smembers_command> smembers_cmd) {
-            m_exec->post([this, smembers_cmd = std::move(smembers_cmd)] { smembers_cmd->execute(m_ctx.get());});
+        command_dispatcher dispatcher(cmd);
+        dispatcher.dispatch(std::move(args), std::move(fn),
+            [this](auto cmd_ex) {
+                m_exec->post([this, cmd_ex = std::move(cmd_ex)] { cmd_ex->execute(m_ctx.get());});
         });
     }
 }

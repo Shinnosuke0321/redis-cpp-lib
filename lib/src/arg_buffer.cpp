@@ -29,7 +29,7 @@ namespace rediscxx::internal {
         }
         return argv;
     }
-    void arg_buffer::append_at_front(std::string str) noexcept {
+    void arg_buffer::append_at_front(std::string_view str) noexcept {
         m_lens.push_front(str.size());
         m_storage.insert(m_storage.begin(), str.begin(), str.end());
     }
