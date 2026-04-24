@@ -8,21 +8,23 @@ namespace rediscxx {
     client::~client() = default;
 
     std::expected<void, core::error::exception> client::connect() const noexcept {
-
-        if (auto res = m_event_executer->init(); !res) {
-            return std::unexpected(res.error().to_exception());
-        }
-
+        using error_variant = std::variant<event::event_loop_error, error::redis_exception>;
         std::promise<std::expected<void, core::error::exception>> promise;
         auto future = promise.get_future();
-        m_transport->connect_async(m_config.host,m_config.port,m_config.password,m_config.dbIndex,
-            [&promise](const std::expected<void, error::redis_exception> &result) {
-                if (!result) {
-                    promise.set_value(std::unexpected(result.error().to_exception()));
-                    return;
+        m_transport->connect_async(
+            m_config.host,
+            m_config.port,
+            m_config.password,
+            m_config.dbIndex,
+            [&promise](std::expected<void, error_variant> res) {
+                if (!res) {
+                    std::visit([&promise](auto&& err) {
+                        promise.set_value(std::unexpected(std::move(err.to_exception())));
+                    }, res.error());
+                } else {
+                    promise.set_value({});
                 }
-                promise.set_value({});
-        });
+            });
         return future.get();
     }
 

@@ -40,6 +40,11 @@ namespace rediscxx {
           m_event_executer(smart_ptr::make_intrusive<event::event_loop_executer>()),
           m_transport(smart_ptr::make_intrusive<transport>(m_event_executer->intrusive_from_this())) {}
 
+        explicit client(config cfg, smart_ptr::intrusive_ptr<event::event_loop_executer> executer)
+        : m_config(std::move(cfg)),
+          m_event_executer(std::move(executer)),
+          m_transport(smart_ptr::make_intrusive<transport>(m_event_executer->intrusive_from_this())) {}
+
         client(const client&) = delete;
         client& operator=(const client&) = delete;
         client(client&&) noexcept = delete;
@@ -75,7 +80,6 @@ namespace rediscxx {
                     }
             });
         }
-
 
     private:
         config m_config;

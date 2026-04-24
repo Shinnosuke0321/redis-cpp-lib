@@ -8,10 +8,7 @@
 namespace rediscxx::error {
     enum class types {
         Unknown = 0,
-        NullReply, AuthCommand, SelectCommand, SetCommand, GetCommand,
-        HSetCommand, HGetAllCommand, SAddCommand, SMembersCommand, SRemCommand,
-        FlushDbCommand, HGetCommand, HDelCommand, ExatCommand, ExpireAtCommand,
-        CallbackRegistrationFailed, EventLoopAttachFailed, AsyncConnectFailed,
+        CommandFailed, CallbackRegistrationFailed, EventLoopAttachFailed, AsyncConnectFailed,
         IO, EndOfFile, ProtocolErr, OutOfMemory, Timeout, Other,
     };
 

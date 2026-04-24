@@ -10,7 +10,6 @@
 #include <expected>
 #include <thread>
 #include <mutex>
-#include <future>
 #include <core/memory/intrusive_ptr.h>
 #include "core/error/base_error.h"
 
@@ -34,7 +33,7 @@ namespace rediscxx::event {
     public:
         event_loop_executer() = default;
 
-        std::expected<void, event_loop_error> init() noexcept {
+        virtual std::expected<void, event_loop_error> init() noexcept {
             static std::once_flag evthread_init;
             std::call_once(evthread_init, [] {
                 if (evthread_use_pthreads() < 0)
@@ -46,7 +45,7 @@ namespace rediscxx::event {
             if (!m_base)
                 return MAKE_UNEXPECTED_ERROR(event_loop_error, ev_err_types::BaseInitFailed, "Failed to create event base");
 
-            m_wakeup_event = event_new(m_base, -1, EV_PERSIST,
+            m_wakeup_event = event_new(m_base, -1, EV_READ,
                 [](evutil_socket_t, short, void* arg) {
                     static_cast<event_loop_executer*>(arg)->drain();
                 },
@@ -93,7 +92,7 @@ namespace rediscxx::event {
                 m_tasks.push(std::move(fn));
             }
             if (m_wakeup_event)
-                event_active(m_wakeup_event, 0, 0);
+                event_active(m_wakeup_event, EV_READ, 0);
         }
 
         event_base* base() const { return m_base; }

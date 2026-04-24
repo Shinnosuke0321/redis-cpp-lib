@@ -13,9 +13,6 @@
 
 class RedisCommandTest: public RedisCxxTest {
 protected:
-    static void SetUpTestCase() {
-
-    }
     void SetUp() override {
         RedisCxxTest::SetUp();
     }

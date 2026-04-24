@@ -7,6 +7,7 @@
 #include <concepts>
 #include <print>
 
+
 namespace core {
     template<class derived>
     class ref_counted;
@@ -56,7 +57,7 @@ namespace core {
 
 namespace smart_ptr {
     template<class T, typename ...Arg>
-    intrusive_ptr<T> make_intrusive(Arg&&... args) {
+    smart_ptr::intrusive_ptr<T> make_intrusive(Arg &&... args) {
         T* ptr = new T(std::forward<Arg>(args)...);
         return intrusive_ptr(ptr);
     }

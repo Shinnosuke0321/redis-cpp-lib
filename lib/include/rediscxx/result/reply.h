@@ -26,7 +26,7 @@ namespace rediscxx::result {
 
         // Deep-copy a redisReply without taking ownership.
         // Use this inside hiredis async callbacks where hiredis owns the reply.
-        static reply from_raw(const redisReply* r) noexcept;
+        static reply from_raw(redisReply* r) noexcept;
 
         bool is_okay() const noexcept;
         bool is_nil() const noexcept;

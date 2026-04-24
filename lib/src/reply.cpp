@@ -3,9 +3,11 @@
 //
 #include "rediscxx/result/reply.h"
 
+#include <ostream>
+
 namespace rediscxx::result {
 
-    reply reply::from_raw(const redisReply* r) noexcept {
+    reply reply::from_raw(redisReply* r) noexcept {
         reply out;
         out.m_type    = r->type;
         out.m_integer = r->integer;
@@ -29,11 +31,12 @@ namespace rediscxx::result {
                 out.m_elements.push_back(std::move(el));
             }
         }
+        freeReplyObject(r);
         return out;
     }
 
     bool reply::is_okay() const noexcept {
-        return m_type == REDIS_REPLY_STATUS && !m_str.empty() && m_str[0] == '+';
+        return m_type == REDIS_REPLY_STATUS && !m_str.empty() && m_str == "OK";
     }
 
     bool reply::is_nil() const noexcept {
@@ -56,7 +59,7 @@ namespace rediscxx::result {
     }
 
     std::optional<std::string> reply::as_string() const noexcept {
-        if (m_type == REDIS_REPLY_STRING || m_type == REDIS_REPLY_STATUS || m_type == REDIS_REPLY_VERB)
+        if (m_type == REDIS_REPLY_STRING || m_type == REDIS_REPLY_VERB)
             return m_str;
         return std::nullopt;
     }
